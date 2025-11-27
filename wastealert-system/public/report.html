@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WasteAlert | Submit Report</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <style>
+        /* Ensures the map takes up a defined space */
+        #map { height: 300px; z-index: 10; }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-lg bg-white shadow-xl rounded-xl p-6 md:p-8">
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">🗑️ Report Waste Incident</h1>
+        <p class="text-center text-gray-600 mb-8">Quickly report illegal dumpsites on campus or in your LGA.</p>
+
+        <div id="message" class="hidden p-3 mb-4 rounded-lg text-center font-medium"></div>
+
+        <form id="reportForm" class="space-y-6">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">1. Pinpoint Location on Map</label>
+                <div id="map" class="rounded-lg border border-gray-300"></div>
+                <p class="text-xs text-red-500 mt-2" id="locationStatus">
+                    Tap/Click the map to set the exact location of the waste.
+                </p>
+                <input type="hidden" id="latitude" name="latitude" required>
+                <input type="hidden" id="longitude" name="longitude" required>
+            </div>
+            
+            <div>
+                <label for="location_name" class="block text-sm font-medium text-gray-700">2. Specific Location Name</label>
+                <input type="text" id="location_name" name="location_name" required 
+                       placeholder="e.g., Behind Hostel B, near the fence"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">3. Description of Waste</label>
+                <textarea id="description" name="description" rows="3" required 
+                          placeholder="Type of waste, estimated size, e.g., 'Large pile of plastic bottles and food waste.'"
+                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-green-500 focus:border-green-500"></textarea>
+            </div>
+
+            <div>
+                <label for="image" class="block text-sm font-medium text-gray-700">4. Upload Photo Proof (Critical)</label>
+                <input type="file" id="image" name="image" accept="image/*" required 
+                       class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+            </div>
+            
+            <div>
+                <label for="reporter_phone" class="block text-sm font-medium text-gray-700">5. Your Phone Number (Optional)</label>
+                <input type="tel" id="reporter_phone" name="reporter_phone" 
+                       placeholder="080XXXXXXXX"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <button type="submit" id="submitBtn" 
+                    class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out disabled:opacity-50">
+                Submit Report
+            </button>
+        </form>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
