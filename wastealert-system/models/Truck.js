@@ -1,39 +1,40 @@
-// models/Truck.js
+// models/Truck.js (Updated Schema)
 
 const mongoose = require('mongoose');
 
 const TruckSchema = new mongoose.Schema({
-    // Unique identifier for the vehicle
+    // CRITICAL FIX: The link to the driver's User document
+    driver_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        unique: true, // Only one truck per driver
+        ref: 'User' // Reference the User model
+    },
+    // Used for display/logging without needing an extra lookup
+    driver_name: {
+        type: String,
+        required: true,
+        trim: true
+    },
     license_plate: {
         type: String,
         required: [true, 'License plate is required'],
-        unique: true,
-        trim: true,
+        unique: true, // IMPORTANT: Ensure plate numbers are unique
+        trim: true
     },
-    
-    // Driver assigned to this truck
-    driver_name: {
-        type: String,
-        required: [true, 'Driver name is required'],
-        trim: true,
-    },
-    
-    // Capacity helps the admin manage report assignment (e.g., assign small reports to small trucks)
     capacity_tons: {
         type: Number,
-        default: 5,
-        required: true,
+        required: [true, 'Capacity is required'],
+        min: 1
     },
-    
-    // Status to quickly filter available trucks in the Admin Dashboard
+    is_approved: {
+        type: Boolean,
+        default: false // Controlled by Admin
+    },
     is_available: {
         type: Boolean,
-        default: true,
-    },
-}, {
-    // Automatically adds createdAt and updatedAt timestamps
-    timestamps: true 
-});
+        default: false // Controlled by Driver/System
+    }
+}, { timestamps: true });
 
-// Export the model for use in routes (e.g., in a new logisticsRoute.js)
 module.exports = mongoose.model('Truck', TruckSchema);

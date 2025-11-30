@@ -3,52 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WasteAlert | Driver Sign-up</title>
+    <title id="pageTitle">Driver Login | WasteAlert</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .auth-card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .text-indigo-600 { color: #4f46e5; }
+        .bg-indigo-600 { background-color: #4f46e5; }
+        .hover\:bg-indigo-700:hover { background-color: #4338ca; }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-    <div class="w-full max-w-md bg-white shadow-xl rounded-lg p-8 md:p-10">
-        <h1 class="text-3xl font-extrabold text-gray-900 text-center mb-6">🚛 Logistics Partner Sign-up</h1>
-        <p class="text-center text-gray-600 mb-8">Register your vehicle to join the waste collection fleet.</p>
+    <div id="statusMessage" class="hidden fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium"></div>
 
-        <div id="message" class="hidden p-3 mb-4 rounded-lg text-center font-medium"></div>
+    <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900">
+                <span class="text-indigo-600">WasteAlert</span> Driver Portal
+            </h1>
+            <p id="subTitle" class="mt-2 text-sm text-gray-500">Sign in to start your session</p>
+        </div>
 
-        <form id="authForm" class="signup-mode"> <h2 id="authTitle" class="text-3xl font-bold mb-6">Driver Sign Up</h2>
+        <div class="auth-card bg-white p-8 rounded-xl">
+            
+            <div id="loginSection">
+                <h2 class="text-xl font-bold text-gray-800 mb-6">Driver Login</h2>
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label for="loginEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" id="loginEmail" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="loginPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="loginPassword" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
+                        Sign In
+                    </button>
+                </form>
+                
+                <p class="mt-6 text-center text-sm">
+                    Don't have an account? 
+                    <button id="showRegisterBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Register here</button>
+                </p>
+            </div>
 
-    <div id="statusMessage" class="hidden"></div>
-
-    <div class="mb-4 signup-only">
-        <label for="driverName" class="block text-sm font-medium text-gray-700">Full Name</label>
-        <input type="text" id="driverName" required class="w-full p-3 border rounded-md">
-    </div>
-
-    <div class="mb-4">
-        <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-        <input type="email" id="email" required class="w-full p-3 border rounded-md">
-    </div>
-
-    <div class="mb-4">
-        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-        <input type="password" id="password" required class="w-full p-3 border rounded-md">
-    </div>
-    
-    <div class="mb-6 signup-only">
-        <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
-        <input type="password" id="confirmPassword" required class="w-full p-3 border rounded-md">
-    </div>
-
-    <button id="authSubmitBtn" type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700">
-        Register & Sign In
-    </button>
-    
-    <div class="mt-4 text-center">
-        <a href="#" id="toggleAuthMode" class="text-sm text-blue-600 hover:underline">Already have an account? <u>Sign In</u></a>
-    </div>
-</form>
+            <div id="registerSection" class="hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-6">Driver Registration</h2>
+                <form id="registerForm" class="space-y-6">
+                    <div>
+                        <label for="registerName" class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input type="text" id="registerName" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="registerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" id="registerEmail" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="registerPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="registerPassword" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" id="registerBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
+                        Register Account
+                    </button>
+                </form>
+                
+                <p class="mt-6 text-center text-sm">
+                    Already registered? 
+                    <button id="showLoginBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Login here</button>
+                </p>
+            </div>
+            
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="./js/driver-auth.js"></script>
+    <script src="js/driver-auth.js"></script>
 </body>
 </html>

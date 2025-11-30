@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard | WasteAlert</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define primary colors for consistency */
+        :root {
+            --color-primary: #4f46e5; /* indigo-600 */
+        }
+        .dashboard-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .badge-pending { background-color: #fef3c7; color: #b45309; } /* amber-100/700 */
+        .badge-approved { background-color: #d1fae5; color: #065f46; } /* green-100/700 */
+        .badge-rejected { background-color: #fee2e2; color: #991b1b; } /* red-100/700 */
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <div id="statusMessage" class="hidden"></div>
+    
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold text-gray-900">
+                <span class="text-indigo-600">WasteAlert</span> Driver Dashboard
+            </h1>
+            <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150 shadow-md">
+                Logout
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+
+        <div class="dashboard-card bg-white p-6 rounded-xl mb-8">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Welcome Back, <span id="driverNameDisplay" class="text-indigo-600">Driver</span></h2>
+    
+    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-8 mt-4 border-t pt-4">
+        <p class="text-sm text-gray-500">Email: <span id="driverEmailDisplay" class="font-medium text-gray-700">Loading...</span></p>
+        
+        <div class="text-sm font-medium mt-2 sm:mt-0 p-3 rounded-lg flex items-center space-x-2" id="truckStatusContainer">
+            <span class="text-gray-500">Profile Status:</span> 
+            <span id="approvalStatus" class="px-3 py-1 rounded-full text-xs font-semibold">Loading...</span>
+        </div>
+    </div>
+
+    <p id="formStatusMessage" class="mt-4 p-3 rounded-lg text-sm"></p>
+</div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-1 dashboard-card bg-white p-6 rounded-xl h-fit">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">Truck Profile Details</h2>
+                
+                <p id="formStatusMessage" class="mb-4 text-sm text-center"></p>
+
+                <form id="truckProfileForm" class="space-y-4">
+                    <div>
+                        <label for="licensePlate" class="block text-sm font-medium text-gray-700">License Plate Number</label>
+                        <input type="text" id="licensePlate" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label for="capacityTons" class="block text-sm font-medium text-gray-700">Truck Capacity (in Tons)</label>
+                        <input type="number" step="0.1" min="0.1" id="capacityTons" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <button type="submit" id="updateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
+                        Submit/Update Truck Details
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 dashboard-card bg-white p-6 rounded-xl">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex justify-between items-center">
+                    <span>Assigned Waste Reports</span>
+                    <button id="refreshReportsBtn" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Refresh</button>
+                </h2>
+                
+                <div class="mb-4 flex items-center space-x-4">
+                    <label for="reportFilter" class="text-sm font-medium text-gray-700">Filter Status:</label>
+                    <select id="reportFilter" class="border border-gray-300 rounded-md p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="Assigned">Assigned (Current)</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Cleared">Cleared (History)</option>
+                        <option value="All">All Reports</option>
+                    </select>
+                </div>
+
+                <div id="assignedReportsList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-4" id="initialReportsMessage">
+                        You have no assigned reports for your current filter.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/driver-dashboard.js"></script>
+</body>
+</html>

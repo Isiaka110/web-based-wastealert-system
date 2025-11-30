@@ -184,7 +184,7 @@
 
         <div class="p-6 overflow-y-auto flex-grow">
             <section class="mb-8">
-                <h4 class="text-xl font-semibold mb-4 text-purple-700">Current Fleet Status</h4>
+                <h4 class="text-xl font-semibold mb-4 text-purple-700">Approved Fleet Status</h4>
                 <div class="bg-gray-50 p-4 rounded-lg shadow-inner">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
@@ -196,37 +196,29 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="trucksTableBody" class="bg-white divide-y divide-gray-200">
+                        <tbody id="approvedTrucksTableBody" class="bg-white divide-y divide-gray-200">
                             </tbody>
                     </table>
                 </div>
             </section>
 
             <section>
-                <h4 class="text-xl font-semibold mb-4 text-green-700 border-t pt-4 mt-4">Add New Truck</h4>
-                <form id="addTruckForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow border">
-                    
-                    <div>
-                        <label for="newPlate" class="block text-sm font-medium text-gray-700">License Plate</label>
-                        <input type="text" id="newPlate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
-                    </div>
-
-                    <div>
-                        <label for="newDriver" class="block text-sm font-medium text-gray-700">Driver Name</label>
-                        <input type="text" id="newDriver" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
-                    </div>
-                    
-                    <div>
-                        <label for="newCapacity" class="block text-sm font-medium text-gray-700">Capacity (Tons)</label>
-                        <input type="number" id="newCapacity" required min="1" step="0.5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
-                    </div>
-                    
-                    <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
-                            ➕ Add Truck
-                        </button>
-                    </div>
-                </form>
+                <h4 class="text-xl font-semibold mb-4 text-orange-600 border-t pt-4 mt-4">Pending Driver Approval</h4>
+                <div class="bg-yellow-50 p-4 rounded-lg shadow border">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-yellow-100">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted Plate</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted Capacity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingDriversTableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                    <div id="noPendingDriversMessage" class="text-center py-4 text-gray-500 hidden">No drivers awaiting approval.</div>
+                </div>
             </section>
         </div>
     </div>

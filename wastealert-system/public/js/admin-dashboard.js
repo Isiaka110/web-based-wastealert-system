@@ -1,6 +1,8 @@
 // public/js/admin-dashboard.js (WASTEALERT ADMIN DASHBOARD LOGIC)
 
 const API_REPORTS_URL = 'http://localhost:5000/api/reports'; 
+// Assuming the /api/trucks endpoint now returns all trucks/drivers, 
+// including those awaiting approval, distinguished by an 'is_approved' flag.
 const API_TRUCKS_URL = 'http://localhost:5000/api/trucks'; 
 
 let reportsData = []; 
@@ -39,10 +41,16 @@ function checkAuthAndInit() {
     $('#approveClearanceBtn').on('click', handleApproveClearance);
     $('#rejectClearanceBtn').on('click', handleRejectProof);
 
-    // --- NEW TRUCK MODAL BINDINGS ---
+    // --- NEW DRIVER/TRUCK MODAL BINDINGS (UPDATED) ---
     $('#closeTruckModalBtn').on('click', closeTruckModal);
-    $('#addTruckForm').on('submit', handleAddTruck);
-    $('#trucksTableBody').on('click', '.toggle-truck-availability', handleToggleTruckStatus); // Delegation for action button
+    // REMOVED: $('#addTruckForm').on('submit', handleAddTruck);
+
+    // Delegation for action button on APPROVED trucks (Toggling availability)
+    $('#approvedTrucksTableBody').on('click', '.toggle-truck-availability', handleToggleTruckStatus); 
+
+    // Delegation for PENDING driver actions
+    $('#pendingDriversTableBody').on('click', '.action-approve-driver', handleApproveDriver);
+    $('#pendingDriversTableBody').on('click', '.action-reject-driver', handleRejectDriver);
     
     // --- TABLE EVENT BINDINGS (Delegation) ---
     $('#reportsTableBody').on('click', '.action-assign-btn', openAssignTruckModal);
@@ -104,9 +112,9 @@ async function fetchTrucks() {
     trucksData = await fetchData(API_TRUCKS_URL);
     populateTruckSelect();
     
-    // RENDER THE TRUCKS TABLE IF THE MODAL IS OPEN
+    // RENDER THE TRUCK MANAGEMENT TABLES IF THE MODAL IS OPEN
     if ($('#truckManagementModal').hasClass('flex')) {
-        renderTrucksTable(trucksData);
+        renderTruckManagementTables(trucksData);
     }
 }
 
@@ -134,12 +142,14 @@ function filterAndRenderReports() {
 
 
 // =================================================================
-// PART 3: RENDERING AND ACTIONS
+// PART 3: REPORT RENDERING AND ACTIONS (Unchanged)
 // =================================================================
 
 function getTruckName(truckId) {
     if (!truckId) return 'N/A';
-    const truck = trucksData.find(t => t._id === truckId);
+    // Only look in approved trucks for assignment display
+    const approvedTrucks = trucksData.filter(t => t.is_approved);
+    const truck = approvedTrucks.find(t => t._id === truckId);
     return truck ? `${truck.license_plate} (${truck.driver_name})` : 'Truck Not Found';
 }
 
@@ -189,7 +199,7 @@ function renderReports(reports) {
 }
 
 // =================================================================
-// PART 4: ASSIGNMENT LOGIC
+// PART 4: ASSIGNMENT LOGIC (Unchanged, uses filtered trucks)
 // =================================================================
 
 function populateTruckSelect() {
@@ -197,9 +207,9 @@ function populateTruckSelect() {
     select.empty();
     select.append('<option value="">-- Select a Truck --</option>');
     
+    // Only show AVAILABLE AND APPROVED trucks for assignment
     trucksData.forEach(truck => {
-        // Only show available trucks for assignment
-        if (truck.is_available) {
+        if (truck.is_approved && truck.is_available) {
              select.append(`<option value="${truck._id}">${truck.license_plate} - ${truck.driver_name} (${truck.capacity_tons}T)</option>`);
         }
     });
@@ -247,7 +257,8 @@ async function handleAssignTruck() {
 
         if (response.ok) {
             showStatusMessage(`Report ${reportId.substring(0, 8)} assigned successfully!`, 'success');
-            Promise.all([fetchReports(), fetchTrucks()]);
+            // Fetch both to update the main reports list and the truck's availability status
+            Promise.all([fetchReports(), fetchTrucks()]); 
         } else {
             showStatusMessage(data.error || 'Failed to assign truck.', 'error');
         }
@@ -262,7 +273,7 @@ async function handleAssignTruck() {
 
 
 // =================================================================
-// PART 5: PROOF REVIEW LOGIC
+// PART 5: PROOF REVIEW LOGIC (Unchanged)
 // =================================================================
 
 function handleMarkClearedOrReview(e) {
@@ -407,7 +418,7 @@ async function handleRejectProof(e) {
 
 
 // =================================================================
-// PART 6: TRUCK MANAGEMENT LOGIC (NEW)
+// PART 6: TRUCK & DRIVER MANAGEMENT LOGIC (REVISED)
 // =================================================================
 
 function openTruckModal() {
@@ -423,16 +434,33 @@ function closeTruckModal() {
     Promise.all([fetchReports(), fetchTrucks()]);
 }
 
-function renderTrucksTable(trucks) {
-    const tbody = $('#trucksTableBody');
+/**
+ * Filters trucks data and calls separate rendering functions for approved and pending drivers.
+ * Assuming truck objects now have an `is_approved` property.
+ */
+function renderTruckManagementTables(trucks) {
+    // Filter into two groups based on the approval status
+    const approvedTrucks = trucks.filter(t => t.is_approved);
+    const pendingDrivers = trucks.filter(t => !t.is_approved);
+    
+    // Render Approved Trucks (CRUD: Toggle availability)
+    renderApprovedTrucks(approvedTrucks);
+    
+    // Render Pending Drivers (Review: Approve/Reject)
+    renderPendingDrivers(pendingDrivers);
+}
+
+
+function renderApprovedTrucks(approvedTrucks) {
+    const tbody = $('#approvedTrucksTableBody'); // Target the new ID
     tbody.empty();
 
-    if (trucks.length === 0) {
-        tbody.append(`<tr><td colspan="5" class="text-center py-4 text-gray-500">No trucks registered yet.</td></tr>`);
+    if (approvedTrucks.length === 0) {
+        tbody.append(`<tr><td colspan="5" class="text-center py-4 text-gray-500">No trucks in the active fleet.</td></tr>`);
         return;
     }
 
-    trucks.forEach(truck => {
+    approvedTrucks.forEach(truck => {
         const isAvailable = truck.is_available;
         const statusText = isAvailable ? 'Available' : 'Busy';
         const statusClass = isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
@@ -460,47 +488,35 @@ function renderTrucksTable(trucks) {
     });
 }
 
-async function handleAddTruck(e) {
-    e.preventDefault();
-    const token = localStorage.getItem('adminToken');
-
-    const newTruck = {
-        license_plate: $('#newPlate').val(),
-        driver_name: $('#newDriver').val(),
-        capacity_tons: parseFloat($('#newCapacity').val()),
-        is_available: true // New trucks are available by default
-    };
-
-    if (!newTruck.license_plate || !newTruck.driver_name || isNaN(newTruck.capacity_tons) || newTruck.capacity_tons <= 0) {
-        return showStatusMessage('Please fill out all truck details correctly.', 'error');
+function renderPendingDrivers(pendingDrivers) {
+    const tbody = $('#pendingDriversTableBody'); // Target the new ID
+    tbody.empty();
+    
+    const noMessage = $('#noPendingDriversMessage');
+    
+    if (pendingDrivers.length === 0) {
+        noMessage.removeClass('hidden');
+        return;
     }
+    
+    noMessage.addClass('hidden');
 
-    showStatusMessage('Adding new truck...', 'info');
-
-    try {
-        const response = await fetch(API_TRUCKS_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newTruck)
-        });
-
-        if (response.ok) {
-            showStatusMessage('Truck added successfully!', 'success');
-            $('#addTruckForm')[0].reset(); // Clear form
-            fetchTrucks(); // Refresh truck list
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to add truck.', 'error');
-        }
-    } catch (err) {
-        showStatusMessage('Network error during truck addition.', 'error');
-    } finally {
-        hideStatusMessage(2000);
-    }
+    pendingDrivers.forEach(driver => {
+        const row = `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${driver.driver_name || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${driver.license_plate || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${driver.capacity_tons || 'N/A'}T</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <button data-id="${driver._id}" class="action-approve-driver bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-xs mr-2">Approve</button>
+                    <button data-id="${driver._id}" class="action-reject-driver bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded text-xs">Reject</button>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
 }
+
 
 async function handleToggleTruckStatus(e) {
     const truckId = $(e.currentTarget).data('id');
@@ -535,9 +551,71 @@ async function handleToggleTruckStatus(e) {
     }
 }
 
+async function handleApproveDriver(e) {
+    const truckId = $(e.currentTarget).data('id');
+    const token = localStorage.getItem('adminToken');
+    
+    showStatusMessage('Approving new driver and truck...', 'info');
+
+    try {
+        const response = await fetch(`${API_TRUCKS_URL}/${truckId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            // Set is_approved to true and make the truck available
+            body: JSON.stringify({ is_approved: true, is_available: true }) 
+        });
+
+        if (response.ok) {
+            showStatusMessage('Driver and truck approved successfully!', 'success');
+            fetchTrucks(); // Refresh to move the entry to the Approved table
+        } else {
+            const data = await response.json();
+            showStatusMessage(data.error || 'Failed to approve driver.', 'error');
+        }
+    } catch (err) {
+        showStatusMessage('Network error during approval.', 'error');
+    } finally {
+        hideStatusMessage(2000);
+    }
+}
+
+async function handleRejectDriver(e) {
+    const truckId = $(e.currentTarget).data('id');
+    
+    if (!confirm("Are you sure you want to reject this driver's submission? This action may delete the entry.")) return;
+
+    const token = localStorage.getItem('adminToken');
+    showStatusMessage('Rejecting driver submission...', 'info');
+
+    try {
+        // Assuming rejection means deleting the temporary or incomplete truck record
+        const response = await fetch(`${API_TRUCKS_URL}/${truckId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (response.ok) {
+            showStatusMessage('Driver submission rejected and removed.', 'success');
+            fetchTrucks(); // Refresh the pending list
+        } else {
+            const data = await response.json();
+            showStatusMessage(data.error || 'Failed to reject and remove submission.', 'error');
+        }
+    } catch (err) {
+        showStatusMessage('Network error during rejection.', 'error');
+    } finally {
+        hideStatusMessage(2000);
+    }
+}
+
 
 // =================================================================
-// PART 7: UTILITIES AND INITIAL CALL
+// PART 7: UTILITIES AND INITIAL CALL (Unchanged)
 // =================================================================
 
 function handleLogout() {

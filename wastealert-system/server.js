@@ -24,7 +24,6 @@ mongoose.connect(dbUri)
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // 6. Basic Test Route
-// This is to ensure the server is running correctly
 app.get('/', (req, res) => {
   res.status(200).json({ 
     message: "WasteAlert API is running!", 
@@ -32,20 +31,19 @@ app.get('/', (req, res) => {
   });
 });
 
-// ********** 7. Route Handlers (To be added in the next step!) **********
-// app.use('/api/reports', require('./routes/reportRoutes'));
-// app.use('/api/auth', require('./routes/authRoutes'));
-// 7. Route Handlers 
+// ********** 7. Route Handlers (UPDATED) **********
 const reportRoutes = require('./routes/reportRoutes');
-const authRoutes = require('./routes/authRoutes'); // Import the new auth routes
-// server.js (Add this below the existing reportRoutes and authRoutes)
+const authRoutes = require('./routes/authRoutes'); // Admin Auth
+const truckRoutes = require('./routes/truckRoutes'); // Admin Truck Management
+// New: Driver Authentication and Profile Routes
+const driverAuthRoutes = require('./routes/driverAuthRoutes'); 
 
-// Truck/Logistics Routes
-const truckRoutes = require('./routes/truckRoutes');
-app.use('/api/trucks', truckRoutes); // Set up the endpoint
 // Mount the routers
 app.use('/api/reports', reportRoutes);
-app.use('/api/auth', authRoutes); // Use the auth routes for login/register
+app.use('/api/auth', authRoutes); // Admin Login/Register
+app.use('/api/trucks', truckRoutes); // Admin Truck Management
+// This line resolves the 404 error
+app.use('/api/drivers/auth', driverAuthRoutes); // **NEW ENDPOINT: Driver Login/Register/Profile**
 
 
 // 8. Start the server

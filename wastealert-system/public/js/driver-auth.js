@@ -1,123 +1,122 @@
-// public/js/driver-auth.js (Driver Authentication Logic)
+// public/js/driver-auth.js (WASTEALERT DRIVER AUTH LOGIC)
 
-const API_AUTH_URL = 'http://localhost:5000/api/drivers/auth';
-const DRIVER_DASHBOARD_URL = 'driver-dashboard.html'; // The page where drivers submit their details
+const API_URL = 'http://localhost:5000/api/drivers/auth';
+const DASHBOARD_URL = 'driver-dashboard.html';
 
 $(document).ready(function() {
-    // Check if the user is already logged in (token exists)
+    // Check if driver is already logged in
     if (localStorage.getItem('driverToken')) {
-        window.location.href = DRIVER_DASHBOARD_URL;
-        return;
+        window.location.href = DASHBOARD_URL;
     }
 
-    $('#authForm').on('submit', handleAuthSubmit);
-    
-    // Add event listener to switch between login and signup modes
-    $('#toggleAuthMode').on('click', toggleAuthMode);
+    // Toggle between login and registration forms
+    $('#showRegisterBtn').on('click', showRegister);
+    $('#showLoginBtn').on('click', showLogin);
+
+    // Form submission handlers
+    $('#loginForm').on('submit', handleLogin);
+    $('#registerForm').on('submit', handleRegister);
 });
 
 // =================================================================
-// PART 1: UI LOGIC
+// FORM TOGGLE FUNCTIONS
 // =================================================================
 
-function toggleAuthMode(e) {
-    e.preventDefault();
-    const isLogin = $('#authForm').hasClass('login-mode');
-    
-    // Toggle the form class
-    $('#authForm').toggleClass('login-mode signup-mode');
-    
-    // Toggle input visibility (Driver Name and Confirm Password needed for signup)
-    $('.signup-only').toggleClass('hidden');
-    
-    // Update button text and link text
-    if (isLogin) {
-        // Switching to SIGNUP mode
-        $('#authTitle').text('Driver Sign Up');
-        $('#authSubmitBtn').text('Register & Sign In');
-        $('#toggleAuthMode').html('Already have an account? <u>Sign In</u>');
-    } else {
-        // Switching to SIGN IN mode
-        $('#authTitle').text('Driver Sign In');
-        $('#authSubmitBtn').text('Sign In');
-        $('#toggleAuthMode').html('Need an account? <u>Sign Up</u>');
-    }
+function showRegister() {
+    $('#loginSection').addClass('hidden');
+    $('#registerSection').removeClass('hidden');
+    $('#pageTitle').text('Driver Registration | WasteAlert');
+    $('#subTitle').text('Create your driver account');
+    hideStatusMessage();
+}
+
+function showLogin() {
+    $('#registerSection').addClass('hidden');
+    $('#loginSection').removeClass('hidden');
+    $('#pageTitle').text('Driver Login | WasteAlert');
+    $('#subTitle').text('Sign in to start your session');
+    hideStatusMessage();
 }
 
 // =================================================================
-// PART 2: AUTHENTICATION LOGIC
+// AUTH HANDLERS
 // =================================================================
 
-async function handleAuthSubmit(e) {
+async function handleLogin(e) {
     e.preventDefault();
-    const isLoginMode = $('#authForm').hasClass('login-mode');
-    
-    const email = $('#email').val().trim();
-    const password = $('#password').val().trim();
-    
-    if (!email || !password) {
-        return showStatusMessage('Please enter email and password.', 'error');
-    }
+    showStatusMessage('Logging in...', 'info');
 
-    let endpoint = '';
-    let body = {};
-    
-    if (isLoginMode) {
-        // --- SIGN IN LOGIC ---
-        endpoint = '/login';
-        body = { email, password };
-        showStatusMessage('Logging in...', 'info');
-    } else {
-        // --- SIGN UP LOGIC ---
-        const name = $('#driverName').val().trim();
-        const confirmPassword = $('#confirmPassword').val().trim();
-        
-        if (!name || password !== confirmPassword) {
-            return showStatusMessage('Please enter your name and ensure passwords match.', 'error');
-        }
-        
-        endpoint = '/register';
-        body = { name, email, password };
-        showStatusMessage('Registering new driver...', 'info');
-    }
-    
-    // Execute API Call
+    const email = $('#loginEmail').val().trim();
+    const password = $('#loginPassword').val();
+
     try {
-        const response = await fetch(API_AUTH_URL + endpoint, {
+        const response = await fetch(`${API_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ email, password })
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            // Success: Store token and redirect
             localStorage.setItem('driverToken', data.token);
-            showStatusMessage('Success! Redirecting to dashboard.', 'success');
+            showStatusMessage('Login successful! Redirecting...', 'success');
             setTimeout(() => {
-                window.location.href = DRIVER_DASHBOARD_URL;
+                window.location.href = DASHBOARD_URL;
             }, 1000);
         } else {
-            // Failure
-            showStatusMessage(data.error || 'Authentication failed. Please check your credentials.', 'error');
+            showStatusMessage(data.error || 'Login failed. Check credentials.', 'error');
         }
     } catch (err) {
-        console.error("Auth Error:", err);
-        showStatusMessage('A network error occurred. Check backend server.', 'error');
+        console.error("Login Error:", err);
+        showStatusMessage('Network error during login.', 'error');
     } finally {
         hideStatusMessage(3000);
     }
 }
 
+async function handleRegister(e) {
+    e.preventDefault();
+    showStatusMessage('Registering driver...', 'info');
+
+    const name = $('#registerName').val().trim();
+    const email = $('#registerEmail').val().trim();
+    const password = $('#registerPassword').val();
+
+    try {
+        const response = await fetch(`${API_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // New driver registered successfully (and truck profile created)
+            localStorage.setItem('driverToken', data.token);
+            showStatusMessage('Registration successful! Redirecting to dashboard...', 'success');
+            setTimeout(() => {
+                window.location.href = DASHBOARD_URL;
+            }, 1000);
+        } else {
+            showStatusMessage(data.error || 'Registration failed.', 'error');
+        }
+    } catch (err) {
+        console.error("Registration Error:", err);
+        showStatusMessage('Network error during registration.', 'error');
+    } finally {
+        hideStatusMessage(4000);
+    }
+}
+
 // =================================================================
-// PART 3: UTILITIES
+// UTILITIES
 // =================================================================
 
 function showStatusMessage(text, type) {
-    // Assuming you have a status message div on your HTML page with id="statusMessage"
     const messageDiv = $('#statusMessage');
-    messageDiv.removeClass().addClass('p-3 mb-4 text-center font-medium rounded-lg');
+    messageDiv.removeClass().addClass('fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium');
     
     if (type === 'success') {
         messageDiv.addClass('bg-green-100 text-green-700').html(`✅ ${text}`).show();

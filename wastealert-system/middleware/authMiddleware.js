@@ -3,39 +3,69 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User'); // Import the User model
 
+// --- 1. Protect Middleware (for Admin Routes) ---
 const protect = async (req, res, next) => {
   let token;
 
-  // 1. Check for the token in the request header
-  // Tokens are typically sent in the format: "Bearer <TOKEN>"
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Get token from header (split "Bearer" and the token itself)
       token = req.headers.authorization.split(' ')[1];
-
-      // 2. Verify the token using the JWT_SECRET
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Not authorized, user not found' });
+      }
 
-      // 3. Find the user associated with the token's ID
-      // Select('-password') excludes the password hash from the user object
-      req.user = await User.findById(decoded.id).select('-password');
+      // **CRITICAL FIX: Check for Admin role**
+      if (user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Access denied: Admin role required' });
+      }
 
-      // 4. Continue to the next middleware or route handler
+      req.user = user;
       next();
     } catch (error) {
-      console.error(error);
-      // Token is invalid (e.g., expired or tampered with)
+      console.error("Admin Auth Error:", error);
       res.status(401).json({ success: false, error: 'Not authorized, token failed' });
     }
   }
 
-  // 5. If no token is found in the header
   if (!token) {
     res.status(401).json({ success: false, error: 'Not authorized, no token' });
   }
 };
 
-module.exports = { protect };
+// --- 2. Protect Driver Middleware (for Driver Routes) ---
+const protectDriver = async (req, res, next) => {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.id).select('-password');
+
+            if (!user) {
+                return res.status(401).json({ success: false, error: 'Not authorized, driver not found' });
+            }
+
+            // **CRITICAL FIX: Check for Driver role**
+            if (user.role !== 'driver') {
+                return res.status(403).json({ success: false, error: 'Access denied: Driver role required' });
+            }
+
+            req.user = user;
+            next();
+        } catch (error) {
+            console.error("Driver Auth Error:", error);
+            res.status(401).json({ success: false, error: 'Not authorized, token failed' });
+        }
+    }
+
+    if (!token) {
+        res.status(401).json({ success: false, error: 'Not authorized, no token' });
+    }
+};
+
+// Export BOTH functions
+module.exports = { protect, protectDriver };
