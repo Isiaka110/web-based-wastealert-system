@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>WasteAlert | Admin Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <header class="bg-white shadow sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="#" class="text-xl font-bold text-gray-900">🗑️ WasteAlert Admin</a>
+                
+                <nav class="hidden md:flex items-center space-x-4">
+                    <button id="manageTrucksBtnDesktop" class="text-gray-600 hover:text-purple-700 font-medium py-2 px-3 rounded transition">
+                        🚚 Manage Trucks
+                    </button>
+                    <button id="logoutBtnDesktop" class="text-white bg-red-600 hover:bg-red-700 font-medium py-2 px-4 rounded transition">
+                        Logout
+                    </button>
+                </nav>
+
+                <button id="mobileMenuBtn" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="mobileMenu" class="md:hidden hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <button id="manageTrucksBtnMobile" class="w-full text-left text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md font-medium">
+                    🚚 Manage Trucks
+                </button>
+                <button id="logoutBtnMobile" class="w-full text-left text-red-600 hover:bg-red-50 block px-3 py-2 rounded-md font-medium">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        
+        <div id="statusMessage" class="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium hidden"></div>
+
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Reports Overview</h2>
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            
+            <div class="bg-blue-100 p-5 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <p class="text-sm font-medium text-blue-600 uppercase">Total Reports</p>
+                    <p id="totalCount" class="text-3xl font-bold text-gray-900">0</p>
+                </div>
+                <svg class="h-10 w-10 text-blue-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+
+            <div class="bg-red-100 p-5 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <p class="text-sm font-medium text-red-600 uppercase">Pending</p>
+                    <p id="pendingCount" class="text-3xl font-bold text-gray-900">0</p>
+                </div>
+                <svg class="h-10 w-10 text-red-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            
+            <div class="bg-yellow-100 p-5 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <p class="text-sm font-medium text-yellow-600 uppercase">In Progress / Assigned</p>
+                    <p id="inProgressCount" class="text-3xl font-bold text-gray-900">0</p>
+                </div>
+                <svg class="h-10 w-10 text-yellow-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+
+            <div class="bg-green-100 p-5 rounded-lg shadow flex justify-between items-center">
+                <div>
+                    <p class="text-sm font-medium text-green-600 uppercase">Cleared</p>
+                    <p id="clearedCount" class="text-3xl font-bold text-gray-900">0</p>
+                </div>
+                <svg class="h-10 w-10 text-green-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+        </section>
+
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 p-4 bg-white shadow rounded-lg">
+            <div class="mb-4 md:mb-0">
+                <label for="statusFilter" class="mr-2 text-gray-700">Filter by Status:</label>
+                <select id="statusFilter" class="border border-gray-300 rounded-md p-2">
+                    <option value="All">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="In-Progress">In Progress</option>
+                    <option value="Cleared">Cleared</option>
+                </select>
+            </div>
+            <button id="manageTrucksBtnMain" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition mt-4 md:mt-0">
+                🚚 Manage Trucks
+            </button>
+        </div>
+
+        <div class="bg-white shadow-xl overflow-x-auto rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Truck</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="assignTruckModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div class="p-6">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2">Assign Truck to Report</h3>
+                <p id="reportIdToAssign" class="text-sm text-gray-600 mb-4"></p>
+                
+                <label for="truckSelect" class="block text-sm font-medium text-gray-700 mb-2">Available Trucks:</label>
+                <select id="truckSelect" class="w-full border border-gray-300 rounded-md p-2">
+                    </select>
+                
+                <button id="confirmAssignmentBtn" class="mt-4 w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Confirm Assignment
+                </button>
+                <button id="closeAssignModalBtn" class="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="proofReviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div class="p-6">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-green-700">✅ Review Clearance Proof</h3>
+                <p class="text-sm text-gray-600 mb-4">Report ID: <span id="proofReportId"></span></p>
+
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Assigned Driver:</p>
+                    <p id="proofDriverInfo" class="text-base font-semibold text-blue-700"></p>
+                </div>
+
+                <div class="mb-4 border p-3 rounded-lg bg-gray-50">
+                    <p class="text-sm font-medium text-gray-700 mb-2">Driver Notes:</p>
+                    <p id="proofNotes" class="text-gray-800 italic"></p>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-sm font-medium text-gray-700 mb-2">Proof Image:</p>
+                    <img id="proofImage" src="" alt="Proof of Waste Clearance" class="w-full max-h-80 rounded-lg shadow-md border object-cover">
+                </div>
+
+                <button id="approveClearanceBtn" data-report-id="" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition">
+                    Approve & Mark Cleared
+                </button>
+                <button id="rejectClearanceBtn" class="mt-2 w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition">
+                    Reject Proof (Return to Assigned)
+                </button>
+                <button id="closeProofModalBtn" class="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                    Close Review
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="truckManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] flex flex-col">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h3 class="text-2xl font-bold text-gray-800">🚚 Truck & Driver Management</h3>
+            <button id="closeTruckModalBtn" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-grow">
+            <section class="mb-8">
+                <h4 class="text-xl font-semibold mb-4 text-purple-700">Current Fleet Status</h4>
+                <div class="bg-gray-50 p-4 rounded-lg shadow-inner">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License Plate</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity (Tons)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trucksTableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h4 class="text-xl font-semibold mb-4 text-green-700 border-t pt-4 mt-4">Add New Truck</h4>
+                <form id="addTruckForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg shadow border">
+                    
+                    <div>
+                        <label for="newPlate" class="block text-sm font-medium text-gray-700">License Plate</label>
+                        <input type="text" id="newPlate" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    <div>
+                        <label for="newDriver" class="block text-sm font-medium text-gray-700">Driver Name</label>
+                        <input type="text" id="newDriver" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
+                    </div>
+                    
+                    <div>
+                        <label for="newCapacity" class="block text-sm font-medium text-gray-700">Capacity (Tons)</label>
+                        <input type="number" id="newCapacity" required min="1" step="0.5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-green-500 focus:border-green-500">
+                    </div>
+                    
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
+                            ➕ Add Truck
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+    <script src="./js/admin-dashboard.js"></script> 
+    <script>
+        // Simple handler for the mobile menu button
+        $('#mobileMenuBtn').on('click', function() {
+            $('#mobileMenu').toggleClass('hidden');
+        });
+        
+        // Ensure all Logout and Manage Trucks buttons are bound in admin-dashboard.js
+        // The inline script only needs the mobile menu toggle now.
+        // The bindings for the other buttons are handled in the 'admin-dashboard.js' update below.
+    </script>
+</body>
+</html>

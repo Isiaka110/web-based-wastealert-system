@@ -37,9 +37,16 @@ app.get('/', (req, res) => {
 // app.use('/api/auth', require('./routes/authRoutes'));
 // 7. Route Handlers 
 const reportRoutes = require('./routes/reportRoutes');
+const authRoutes = require('./routes/authRoutes'); // Import the new auth routes
+// server.js (Add this below the existing reportRoutes and authRoutes)
 
-// Mount the router
+// Truck/Logistics Routes
+const truckRoutes = require('./routes/truckRoutes');
+app.use('/api/trucks', truckRoutes); // Set up the endpoint
+// Mount the routers
 app.use('/api/reports', reportRoutes);
+app.use('/api/auth', authRoutes); // Use the auth routes for login/register
+
 
 // 8. Start the server
 app.listen(PORT, () => {

@@ -3,11 +3,16 @@
 const express = require('express');
 const router = express.Router();
 const Report = require('../models/Report');
+// THIS SHOULD BE THE ONLY LINE DEFINING 'upload'
+const { upload } = require('../config/cloudinaryConfig'); 
+const { protect } = require('../middleware/authMiddleware'); 
+
+// ... rest of the code ...
 
 // NOTE: We will integrate the image upload (Cloudinary/Multer) in a later step.
 // For now, assume the image_url is provided in the request body.
 // Import the Cloudinary upload middleware
-const { upload } = require('../config/cloudinaryConfig');
+
 // @route   POST /api/reports
 // @desc    Create a new waste report
 // @access  Public (Reporter/Citizen)
@@ -55,19 +60,51 @@ router.post('/', upload.single('image'), async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error: Could not submit report.' });
   }
 });
-// @route   GET /api/reports
-// @desc    Get all reports (Admin Dashboard View)
-// @access  Public for MVP, but will be restricted to Admin later
-router.get('/', async (req, res) => {
-  try {
-    // Fetch all reports, sorted by date created (newest first)
-    const reports = await Report.find().sort({ date_created: -1 });
 
-    res.status(200).json({ success: true, count: reports.length, data: reports });
+
+// ... (Existing POST /api/reports and GET /api/reports routes remain the same) ...
+
+
+// @route   PUT /api/reports/:id
+// @desc    Update a report status (Mark as Cleared)
+// @access  Private (Admin Only)
+// The 'protect' middleware runs first, authenticating the user before the update logic
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, error: 'Report not found' });
+    }
+
+    // Ensure only status and date_cleared can be updated via this route
+    const updateData = {
+      status: req.body.status || report.status,
+    };
+    
+    // If the status is being set to 'Cleared', set the cleared date
+    if (updateData.status === 'Cleared' && report.status !== 'Cleared') {
+        updateData.date_cleared = Date.now();
+    }
+    
+    // Update the document in MongoDB
+    const updatedReport = await Report.findByIdAndUpdate(
+        req.params.id, 
+        { $set: updateData }, 
+        { new: true, runValidators: true } // Return the updated document and run schema validators
+    );
+
+    res.status(200).json({ 
+      success: true, 
+      data: updatedReport, 
+      message: `Report ID ${req.params.id} status updated to ${updatedReport.status}.`
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, error: 'Server error: Could not fetch reports.' });
+    res.status(500).json({ success: false, error: 'Server error during report update.' });
   }
 });
 
 module.exports = router;
+

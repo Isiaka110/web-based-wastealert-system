@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WasteAlert | Admin Login</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-white shadow-2xl rounded-lg p-8 md:p-10">
+        <h1 class="text-3xl font-extrabold text-gray-900 text-center mb-6">🔒 Admin Dashboard Login</h1>
+        <p class="text-center text-gray-600 mb-8">Enter your credentials to manage waste reports.</p>
+
+        <div id="message" class="hidden p-3 mb-4 rounded-lg text-center font-medium"></div>
+
+        <form id="adminLoginForm" class="space-y-6">
+            
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="wastealert_admin"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="StrongPassword123"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <button type="submit" id="loginBtn" 
+                    class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out disabled:opacity-50">
+                Log In
+            </button>
+        </form>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/admin-auth.js"></script>
+</body>
+</html>

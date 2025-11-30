@@ -38,20 +38,61 @@ const ReportSchema = new mongoose.Schema({
     required: [true, 'An image proof of the waste pile is required.'],
   },
   
-  // 5. System Management Fields
+  // 5. System Management & Workflow Fields
   status: {
     type: String,
-    enum: ['Pending', 'Cleared', 'In-Review'], // Defines the possible values
+    // NEW STATUSES for the logistics workflow
+    enum: ['Pending', 'Assigned', 'In-Progress', 'Cleared'], 
     default: 'Pending',
   },
+  
+  // --- NEW FIELDS FOR MULTI-ADMIN & LOGISTICS ---
+
+  // Tracks which Admin/User last modified the report
+  last_updated_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // Links to the User model (Admin who took action)
+    default: null
+  },
+  
+  // Tracks which Truck/Driver is assigned to the pickup
+  assigned_to: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Truck', // Links to the NEW Truck model
+    default: null
+  },
+
+  date_assigned: {
+    type: Date,
+    default: null
+  },
+
+  // Proof submitted by the Driver upon pickup
+  proof_image_url: { 
+    type: String, 
+    default: null 
+  },
+  
+  proof_notes: { 
+    type: String, 
+    default: null 
+  },
+  
+  proof_submitted_at: { 
+    type: Date, 
+    default: null 
+  },
+  
+  // --- END NEW FIELDS ---
   
   date_created: {
     type: Date,
     default: Date.now,
   },
   
-  date_cleared: { // Admin will set this when they mark it as 'Cleared'
+  date_cleared: { // Admin sets this when they mark it as 'Cleared'
     type: Date,
+    default: null // Ensure it defaults to null
   }
 }, {
   timestamps: true // Adds `createdAt` and `updatedAt` timestamps automatically
