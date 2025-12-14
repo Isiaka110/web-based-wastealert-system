@@ -7,119 +7,145 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    
     <style>
-        /* Ensures the map takes up a defined space, responsive height */
-        #map { 
-            height: 400px; /* Default height for mobile/tablet */
-            z-index: 10; 
+        /* Consistent card styling */
+        .report-container {
+            /* Better shadow for a modern card look */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
         }
-        /* Desktop: Map takes full height of the container */
-        @media (min-width: 1024px) {
-            #map { 
-                height: 100%; 
-                min-height: 700px; /* Ensure a minimum height for the desktop view */
+        
+        /* Custom file input styling to match the theme (FIXED - NO @apply) */
+        .file-input-style {
+            cursor: pointer;
+            /* Direct CSS replacement for @apply classes: */
+            border-width: 1px;
+            border-color: #d1d5db; /* gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            padding-top: 0; 
+            padding-bottom: 0;
+            line-height: 1.5; 
+            padding-left: 0.5rem; /* Small padding next to the button */
+        }
+        
+        /* Focus styling fix */
+        .file-input-style:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: #6366f1; /* indigo-500 */
+            box-shadow: 0 0 0 3px #c7d2fe; 
+        }
+
+        .file-input-style::file-selector-button {
+            border: 0;
+            padding: 0.75rem 1rem;
+            margin-right: 1rem;
+            border-radius: 0.4rem; /* Match the main input's rounded-lg */
+            font-weight: 600; /* semi-bold */
+            font-size: 0.875rem; /* text-sm */
+            background-color: #eef2ff; /* indigo-50 */
+            color: #4f46e5; /* indigo-700 */
+            transition: background-color 0.15s ease-in-out;
+            /* Direct CSS replacement for @apply classes: */
+            display: block; /* block on mobile */
+        }
+        
+        /* Media query for sm:inline-block for the file input button */
+        @media (min-width: 640px) {
+            .file-input-style::file-selector-button {
+                display: inline-block;
             }
         }
 
-        /* Consistent card styling */
-        .report-container {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-        .file-input-style {
-            /* Custom file input styling to match the theme */
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db; /* gray-300 */
-            background-color: #f9fafb; /* gray-50 */
-            color: #4b5563; /* gray-600 */
-            transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-        }
-        .file-input-style:hover {
-            border-color: #4f46e5; /* indigo-600 */
+        .file-input-style::file-selector-button:hover {
+            background-color: #e0e7ff; /* indigo-100 */
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 sm:p-8 lg:p-12">
+<body class="bg-gray-100 antialiased flex items-center justify-center min-h-screen p-4">
+    
+    <div id="message" class="hidden fixed top-4 left-4 right-4 md:right-4 md:left-auto z-50 p-4 rounded-lg shadow-xl font-medium"></div>
 
-    <div id="message" class="hidden fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium"></div>
-
-    <div class="max-w-7xl mx-auto report-container bg-white rounded-xl overflow-hidden lg:flex">
+    <div class="w-full max-w-lg mx-auto report-container bg-white rounded-xl p-6 md:p-8 my-8">
         
-        <div class="lg:w-2/5 p-6 bg-gray-50 border-r border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <span class="text-indigo-600 mr-2">📍</span> Incident Location
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 text-center mb-4">
+            🗑️ Report Waste Incident
+        </h1>
+        <p class="text-center text-gray-600 mb-8 max-w-sm mx-auto">
+            Please provide accurate location details and photo proof to alert the cleanup team.
+        </p>
+        
+        <form id="reportForm" class="space-y-8">
+            
+            <h2 class="text-xl font-bold text-gray-800 flex items-center border-b pb-2">
+                <span class="text-indigo-600 mr-2 text-2xl">1.</span> Select Location
             </h2>
-            <p class="text-sm text-gray-600 mb-4">
-                **Step 1:** Zoom in and **tap/click** the map precisely where the waste is located.
-            </p>
-            <div id="map" class="rounded-lg border border-gray-300"></div>
-            <div class="mt-4 p-3 bg-indigo-50 border-l-4 border-indigo-500 rounded-md">
-                <p class="text-sm text-indigo-800 font-medium" id="locationStatus">
-                    Location not yet selected.
-                </p>
-                <input type="hidden" id="latitude" name="latitude" required>
-                <input type="hidden" id="longitude" name="longitude" required>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label for="state_area" class="block text-base font-semibold text-gray-700 mb-2">
+                        State <span class="text-red-500">*</span>
+                    </label>
+                    <select id="state_area" name="state_area" required
+                            class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select State</option>
+                        </select>
+                </div>
+                <div>
+                    <label for="lga_city" class="block text-base font-semibold text-gray-700 mb-2">
+                        LGA / City <span class="text-red-500">*</span>
+                    </label>
+                    <select id="lga_city" name="lga_city" required disabled
+                            class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select LGA</option>
+                        </select>
+                </div>
             </div>
-        </div>
 
-        <div class="lg:w-3/5 p-6 md:p-10 lg:p-12">
-            <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
-                🗑️ Report Waste Incident
-            </h1>
-            <p class="text-gray-500 mb-8 border-b pb-4">
-                Provide details and photo evidence to help our cleanup teams dispatch quickly. All fields are required unless marked optional.
-            </p>
+            <div>
+                <label for="location_name" class="block text-base font-semibold text-gray-700 mb-2">
+                    2. Specific Location/Landmark Description <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="location_name" name="location_name" required 
+                        placeholder="e.g., Exactly opposite the main market gate, near the broken blue barrel." 
+                        class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
 
-            <form id="reportForm" class="space-y-6">
-                
-                <div>
-                    <label for="location_name" class="block text-base font-semibold text-gray-700 mb-2">
-                        Specific Location Name <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="location_name" name="location_name" required 
-                           placeholder="e.g., Corner of Main Street and School Road"
-                           class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
+            <div>
+                <label for="description" class="block text-base font-semibold text-gray-700 mb-2">
+                    3. Description of Waste <span class="text-red-500">*</span>
+                </label>
+                <textarea id="description" name="description" rows="4" required
+                            placeholder="e.g., Large pile of mixed domestic and construction waste, blocking half the road."
+                            class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+            </div>
+            
+            <div>
+                <label for="image" class="block text-base font-semibold text-gray-700 mb-2">
+                    4. Upload Photo Proof (Critical) <span class="text-red-500">*</span>
+                </label>
+                <input type="file" id="image" name="image" accept="image/*" required 
+                        class="file-input-style mt-1 block w-full">
+            </div>
+            
+            <div>
+                <label for="reporter_phone" class="block text-base font-semibold text-gray-700 mb-2">
+                    5. Your Phone Number <span class="text-red-500">*</span>
+                </label>
+                <input type="tel" id="reporter_phone" name="reporter_phone" required
+                        placeholder="+23480XXXXXXXX (Standard form)"
+                        pattern="^\+234\d{10}$" 
+                        title="Phone number must start with +234 and be followed by 10 digits (e.g., +2348012345678)."
+                        class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
 
-                <div>
-                    <label for="description" class="block text-base font-semibold text-gray-700 mb-2">
-                        Description of Waste <span class="text-red-500">*</span>
-                    </label>
-                    <textarea id="description" name="description" rows="4" required 
-                              placeholder="Describe the type of waste (e.g., plastics, construction debris, bio-waste) and its estimated size (e.g., 'Small pile, roughly 1 cubic meter')."
-                              class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-                </div>
-
-                <div>
-                    <label for="image" class="block text-base font-semibold text-gray-700 mb-2">
-                        Photo Proof (Upload Image) <span class="text-red-500">*</span>
-                    </label>
-                    <input type="file" id="image" name="image" accept="image/*" required 
-                           class="file-input-style mt-1 block w-full">
-                </div>
-                
-                <div>
-                    <label for="reporter_phone" class="block text-base font-semibold text-gray-700 mb-2">
-                        Your Phone Number (Optional)
-                    </label>
-                    <input type="tel" id="reporter_phone" name="reporter_phone" 
-                           placeholder="080XXXXXXXX (for follow-up if needed)"
-                           class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-
-                <button type="submit" id="submitBtn" 
-                        class="w-full py-4 px-4 border border-transparent rounded-lg shadow-lg text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ease-in-out disabled:opacity-50 mt-8">
-                    Submit Report and Alert Cleanup Team
-                </button>
-            </form>
-        </div>
-
+            <button type="submit" id="submitBtn" 
+                    class="w-full py-4 px-4 border border-transparent rounded-lg shadow-xl text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ease-in-out disabled:opacity-50 mt-8">
+                Submit Report and Alert Cleanup Team
+            </button>
+        </form>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="./js/app.js"></script>
 </body>

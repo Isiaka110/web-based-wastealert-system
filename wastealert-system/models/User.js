@@ -1,7 +1,7 @@
-// models/User.js (Pre-save hook removed to fix persistent TypeError)
+// models/User.js 
 
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // Using bcryptjs
+const bcrypt = require('bcryptjs'); 
 
 const UserSchema = new mongoose.Schema({
   username: {
@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
+    // Note: 'superadmin' is usually for initial setup/database seed
     enum: ['admin', 'superadmin', 'driver'], 
     default: 'admin',
   },
@@ -31,10 +32,7 @@ const UserSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// FIX: The UserSchema.pre('save', ...) hook has been removed entirely.
-// Hashing is now handled synchronously in the route handlers (driverAuthRoutes.js).
-
-// Method to compare login password with the stored hashed password (remains valid)
+// Method to compare login password with the stored hashed password
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

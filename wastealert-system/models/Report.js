@@ -19,17 +19,21 @@ const ReportSchema = new mongoose.Schema({
     trim: true,
   },
   
-  // 3. Location Information (Crucial for the system)
+  // 3. Location Information (Crucial for the system - Now uses State/LGA/Location Name only)
   location: {
-    name: { // E.g., "Behind Main Auditorium"
+    name: { // E.g., "Behind Main Auditorium" - Specific landmark/address part
       type: String,
-      required: true,
+      required: [true, 'A specific location name/landmark is required.'],
     },
-    coordinates: { // Stored as [longitude, latitude] for Leaflet/GeoJSON
-      type: [Number], 
-      required: true,
-      index: '2dsphere' // Special index for geospatial queries
+    state_area: { // E.g., "Lagos"
+        type: String,
+        required: [true, 'The State/Area is required.'],
+    },
+    lga_city: { // E.g., "Ikeja" - The specific local government area/city
+        type: String,
+        required: [true, 'The Local Government Area/City is required.'],
     }
+    // coordinates field has been removed entirely
   },
 
   // 4. Image Proof (The link from Cloudinary)
@@ -41,7 +45,6 @@ const ReportSchema = new mongoose.Schema({
   // 5. System Management & Workflow Fields
   status: {
     type: String,
-    // NEW STATUSES for the logistics workflow
     enum: ['Pending', 'Assigned', 'In-Progress', 'Cleared'], 
     default: 'Pending',
   },
@@ -67,6 +70,11 @@ const ReportSchema = new mongoose.Schema({
     default: null
   },
 
+  date_cleared: {
+    type: Date,
+    default: null
+  },
+
   // Proof submitted by the Driver upon pickup
   proof_image_url: { 
     type: String, 
@@ -84,19 +92,11 @@ const ReportSchema = new mongoose.Schema({
   },
   
   // --- END NEW FIELDS ---
-  
-  date_created: {
-    type: Date,
-    default: Date.now,
-  },
-  
-  date_cleared: { // Admin sets this when they mark it as 'Cleared'
-    type: Date,
-    default: null // Ensure it defaults to null
-  }
-}, {
-  timestamps: true // Adds `createdAt` and `updatedAt` timestamps automatically
-});
 
-// Export the model for use in our server/routes
-module.exports = mongoose.model('Report', ReportSchema);
+}, { timestamps: { createdAt: 'date_reported' } });
+
+// IMPORTANT: No '2dsphere' index is needed anymore.
+
+const Report = mongoose.model('Report', ReportSchema);
+
+module.exports = Report;

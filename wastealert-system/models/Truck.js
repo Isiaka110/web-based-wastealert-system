@@ -1,16 +1,14 @@
-// models/Truck.js (Updated Schema)
+// models/Truck.js 
 
 const mongoose = require('mongoose');
 
 const TruckSchema = new mongoose.Schema({
-    // CRITICAL FIX: The link to the driver's User document
     driver_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        unique: true, // Only one truck per driver
+        unique: true, // Only one truck per driver/user
         ref: 'User' // Reference the User model
     },
-    // Used for display/logging without needing an extra lookup
     driver_name: {
         type: String,
         required: true,
@@ -19,22 +17,26 @@ const TruckSchema = new mongoose.Schema({
     license_plate: {
         type: String,
         required: [true, 'License plate is required'],
-        unique: true, // IMPORTANT: Ensure plate numbers are unique
+        unique: true, // IMPORTANT: Plate numbers must be unique across all units
         trim: true
     },
     capacity_tons: {
         type: Number,
-        required: [true, 'Capacity is required'],
-        min: 1
+        required: [true, 'Capacity (in tons) is required'],
+        min: [1, 'Capacity must be at least 1 ton.']
     },
     is_approved: {
         type: Boolean,
         default: false // Controlled by Admin
     },
-    is_available: {
+    // CRITICAL FIX: is_assigned is the field used in report/truck routes to mark busy/available
+    is_assigned: {
         type: Boolean,
-        default: false // Controlled by Driver/System
+        default: false // True if currently assigned a report, False if available
     }
 }, { timestamps: true });
+
+// Note: Renamed 'is_available' to 'is_assigned' for clarity (True = Busy / False = Available)
+// You may need to update 'truckRoutes.js' to use 'is_assigned' instead of 'is_available'.
 
 module.exports = mongoose.model('Truck', TruckSchema);

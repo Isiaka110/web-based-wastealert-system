@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Driver Login | WasteAlert</title>
+    <title id="pageTitle">Fleet Operator Login | EMIWIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         .auth-card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
@@ -21,24 +22,24 @@
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-gray-900">
-                <span class="text-indigo-600">WasteAlert</span> Driver Portal
+                <span class="text-indigo-600">EMIWIP</span> Fleet Operator Portal
             </h1>
-            <p id="subTitle" class="mt-2 text-sm text-gray-500">Sign in to start your session</p>
+            <p id="subTitle" class="text-lg text-gray-600 mt-2">Sign in to start your session</p>
         </div>
 
-        <div class="auth-card bg-white p-8 rounded-xl">
+        <div class="bg-white p-8 rounded-xl auth-card">
             
             <div id="loginSection">
-                <h2 class="text-xl font-bold text-gray-800 mb-6">Driver Login</h2>
                 <form id="loginForm" class="space-y-6">
                     <div>
                         <label for="loginEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input type="email" id="loginEmail" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="email" id="loginEmail" name="email" required autocomplete="email" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="loginPassword" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="loginPassword" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="password" id="loginPassword" name="password" required autocomplete="current-password" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
+                    
                     <button type="submit" id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
                         Sign In
                     </button>
@@ -46,27 +47,40 @@
                 
                 <p class="mt-6 text-center text-sm">
                     Don't have an account? 
-                    <button id="showRegisterBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Register here</button>
+                    <button id="showRegisterBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Register Fleet Unit</button>
                 </p>
             </div>
 
             <div id="registerSection" class="hidden">
-                <h2 class="text-xl font-bold text-gray-800 mb-6">Driver Registration</h2>
-                <form id="registerForm" class="space-y-6">
+                <p class="text-sm text-center text-gray-500 mb-4">Register your account and truck details for Portal Manager approval.</p>
+                <form id="registerForm" class="space-y-4">
                     <div>
-                        <label for="registerName" class="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input type="text" id="registerName" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="registerUsername" class="block text-sm font-medium text-gray-700">Full Name / Username</label>
+                        <input type="text" id="registerUsername" name="username" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="registerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input type="email" id="registerEmail" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="email" id="registerEmail" name="email" required autocomplete="email" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="registerPassword" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="registerPassword" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="password" id="registerPassword" name="password" required autocomplete="new-password" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
+                    
+                    <div class="pt-2">
+                        <h3 class="text-md font-semibold text-gray-800 border-t pt-4">Fleet Unit Details</h3>
+                    </div>
+                    <div>
+                        <label for="registerLicensePlate" class="block text-sm font-medium text-gray-700">License Plate Number</label>
+                        <input type="text" id="registerLicensePlate" name="license_plate" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 uppercase">
+                    </div>
+                    <div>
+                        <label for="registerCapacityTons" class="block text-sm font-medium text-gray-700">Capacity (Tons/m³)</label>
+                        <input type="number" step="0.1" id="registerCapacityTons" name="capacity_tons" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
                     <button type="submit" id="registerBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
-                        Register Account
+                        Register Fleet Unit
                     </button>
                 </form>
                 
@@ -80,6 +94,6 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="js/driver-auth.js"></script>
+    <script src="./js/driver-auth.js"></script>
 </body>
 </html>

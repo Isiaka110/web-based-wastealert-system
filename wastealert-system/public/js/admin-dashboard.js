@@ -1,635 +1,672 @@
-// public/js/admin-dashboard.js (WASTEALERT ADMIN DASHBOARD LOGIC)
+// public/js/admin-dashboard.js (EMIWIP PORTAL MANAGER DASHBOARD LOGIC - CRITICALLY UPDATED)
+
+// =================================================================
+// 1. CONSTANTS AND STATE (Updated for EMIWIP Terminology)
+// =================================================================
 
 const API_REPORTS_URL = 'http://localhost:5000/api/reports'; 
-// Assuming the /api/trucks endpoint now returns all trucks/drivers, 
-// including those awaiting approval, distinguished by an 'is_approved' flag.
 const API_TRUCKS_URL = 'http://localhost:5000/api/trucks'; 
+// API URL remains 'trucks' to match backend routes, but logically refers to Fleet
+const API_AVAILABLE_TRUCKS_URL = `${API_REPORTS_URL}/availabletrucks`; 
+const ADMIN_LOGIN_URL = 'admin-login.html'; // Portal Manager Login
 
 let reportsData = []; 
-let trucksData = []; 
-let currentReportIdToAssign = null; // State variable for assignment modal
+let availableFleetUnits = []; // Fleet Units available for assignment dropdown
+let allFleetUnits = []; // All Fleet Units for the Fleet Management Modal
+let currentReportIdToAssign = null; 
+let detailMap = null; // Leaflet map instance for the Detail Modal
 
 // =================================================================
-// PART 1: AUTHENTICATION AND INITIALIZATION
+// 2. INITIALIZATION & AUTHENTICATION
 // =================================================================
+
+$(document).ready(function() {
+    checkAuthAndInit();
+});
+
+function getToken() {
+    return localStorage.getItem('adminToken');
+}
+
+/**
+ * Generates the headers object with Authorization token.
+ * Prevents sending a malformed 'Bearer ' header if the token is null/empty.
+ */
+function getAuthHeaders(contentType = 'application/json') {
+    const token = getToken();
+    const headers = {};
+    
+    if (contentType) {
+        headers['Content-Type'] = contentType;
+    }
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
+
+/**
+ * Global function to check for authentication errors (401/403/400 token issues) and redirect.
+ * This is the critical fix for the '400 Bad Request' initialization error.
+ */
+function handleAuthError(response) {
+    // Check for common unauthorized/forbidden statuses
+    if (response.status === 401 || response.status === 403 || response.status === 400) {
+        if (response.status === 400) {
+             // 400 is often thrown by the server's 'protect' middleware when a malformed token is sent
+             console.error('Authentication check failed (400 Bad Request), forcing logout.');
+        }
+        showStatusMessage('Session expired or unauthorized. Please log in again.', 'error');
+        handleLogout();
+        return true; 
+    }
+    return false;
+}
 
 function checkAuthAndInit() {
-    const token = localStorage.getItem('adminToken');
-    
-    if (!token) {
-        window.location.href = 'admin-login.html';
+    if (!getToken()) {
+        window.location.href = ADMIN_LOGIN_URL;
         return;
     }
     
-    // --- RESPONSIVE BUTTON BINDINGS (UPDATED) ---
-    // Logout Buttons (Desktop & Mobile)
+    // --- RESPONSIVE BUTTON BINDINGS ---
     $('#logoutBtnDesktop, #logoutBtnMobile').on('click', handleLogout);
-    
-    // Manage Trucks Buttons - NOW OPEN THE MODAL
-    $('#manageTrucksBtnDesktop, #manageTrucksBtnMobile, #manageTrucksBtnMain').on('click', openTruckModal); // CHANGED
+    // Button names remain the same for simplicity in HTML
+    $('#manageTrucksBtnDesktop, #manageTrucksBtnMobile').on('click', openTruckModal); 
 
     // Filter
     $('#statusFilter').on('change', filterAndRenderReports);
     
     // --- MODAL BUTTON BINDINGS ---
-    // Assign Truck Modal
-    $('#closeAssignModalBtn').on('click', hideAssignTruckModal);
-    $('#confirmAssignmentBtn').on('click', handleAssignTruck);
+    // Assignment Modal
+    $('#assignmentForm').on('submit', handleTruckAssignment); 
+    $('#closeAssignmentModalBtn').on('click', closeAssignmentModal);
+    $('#unassignTruckBtn').on('click', handleUnassignment);
     
-    // Proof Review Modal
-    $('#closeProofModalBtn').on('click', hideProofReviewModal);
-    $('#approveClearanceBtn').on('click', handleApproveClearance);
-    $('#rejectClearanceBtn').on('click', handleRejectProof);
-
-    // --- NEW DRIVER/TRUCK MODAL BINDINGS (UPDATED) ---
+    // Detail Modal
+    $('#openAssignmentModalBtn').on('click', function() {
+        // Retrieve the full report object from the data array
+        const report = reportsData.find(r => r._id === currentReportIdToAssign);
+        // Only open assignment if the status is not 'Cleared'
+        if (report && report.status !== 'Cleared') {
+            closeDetailModal();
+            openAssignmentModal(currentReportIdToAssign);
+        } else if (report && report.status === 'Cleared') {
+            showStatusMessage('Cleared records cannot be reassigned.', 'info');
+        }
+    });
+    $('#closeDetailModalBtn').on('click', closeDetailModal); 
+    $('#deleteReportBtn').on('click', handleDeleteReport);
+    
+    // Truck Management Modal
     $('#closeTruckModalBtn').on('click', closeTruckModal);
-    // REMOVED: $('#addTruckForm').on('submit', handleAddTruck);
-
-    // Delegation for action button on APPROVED trucks (Toggling availability)
-    $('#approvedTrucksTableBody').on('click', '.toggle-truck-availability', handleToggleTruckStatus); 
-
-    // Delegation for PENDING driver actions
-    $('#pendingDriversTableBody').on('click', '.action-approve-driver', handleApproveDriver);
-    $('#pendingDriversTableBody').on('click', '.action-reject-driver', handleRejectDriver);
     
-    // --- TABLE EVENT BINDINGS (Delegation) ---
-    $('#reportsTableBody').on('click', '.action-assign-btn', openAssignTruckModal);
-    $('#reportsTableBody').on('click', '.action-clear-btn', handleMarkClearedOrReview); 
-    $('#reportsTableBody').on('click', '.view-detail-btn', showDetailModal);
-
-    // Initial data fetch: Reports and Trucks
-    Promise.all([fetchReports(), fetchTrucks()]);
+    // Initial data fetch
+    fetchAllData();
 }
 
 // =================================================================
-// PART 2: DATA FETCHING AND SUMMARY
+// 3. DATA FETCHING (Updated with handleAuthError checks)
 // =================================================================
 
-async function fetchData(url) {
-    const token = localStorage.getItem('adminToken');
-
-    if (!token) { 
-        window.location.href = 'admin-login.html';
-        return [];
-    }
-    
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json',
-            },
-        });
-        const data = await response.json();
-
-        if (response.ok) {
-            return data.data; 
-        } else if (response.status === 401) {
-            showStatusMessage('Session expired. Please log in again.', 'error');
-            setTimeout(() => handleLogout(), 2000);
-            return [];
-        } else {
-            showStatusMessage(`Failed to fetch data: ${data.error || response.statusText}`, 'error');
-            return [];
-        }
-    } catch (err) {
-        console.error('Network Error fetching:', url, err);
-        showStatusMessage('A network error occurred. Check backend server.', 'error');
-        return [];
-    }
+async function fetchAllData() {
+    // Fetch order is important: Reports, then available units, then all units
+    await fetchReports();
+    await fetchAvailableFleetUnits(); 
+    await fetchAllFleetUnits(); 
 }
 
 async function fetchReports() {
-    showStatusMessage('Loading reports...', 'info');
-    reportsData = await fetchData(API_REPORTS_URL);
-    updateSummaryTiles();
-    filterAndRenderReports();
-    hideStatusMessage(100);
-}
+    $('#loadingMessage').removeClass('hidden');
+    $('#reportsContainer').empty().append($('#loadingMessage'));
 
-async function fetchTrucks() {
-    trucksData = await fetchData(API_TRUCKS_URL);
-    populateTruckSelect();
-    
-    // RENDER THE TRUCK MANAGEMENT TABLES IF THE MODAL IS OPEN
-    if ($('#truckManagementModal').hasClass('flex')) {
-        renderTruckManagementTables(trucksData);
+    try {
+        const response = await fetch(API_REPORTS_URL, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return; // CRITICAL: Check for auth error
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} (${response.statusText}) - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        reportsData = result.data.sort((a, b) => new Date(b.date_reported) - new Date(a.date_reported));
+        filterAndRenderReports(); 
+    } catch (err) {
+        console.error('Fetch Incident Records Error:', err);
+        showStatusMessage(`Fetch Incident Records Error: ${err.message}`, 'error');
+    } finally {
+        $('#loadingMessage').addClass('hidden');
     }
 }
 
-function updateSummaryTiles() {
-    const pending = reportsData.filter(r => r.status === 'Pending').length;
-    const inProgress = reportsData.filter(r => r.status === 'Assigned' || r.status === 'In-Progress').length; 
-    const cleared = reportsData.filter(r => r.status === 'Cleared').length;
-    
-    $('#totalCount').text(reportsData.length);
-    $('#pendingCount').text(pending);
-    $('#inProgressCount').text(inProgress);
-    $('#clearedCount').text(cleared);
+async function fetchAvailableFleetUnits() {
+    try {
+        const response = await fetch(API_AVAILABLE_TRUCKS_URL, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return; // CRITICAL: Check for auth error
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} (${response.statusText})`);
+        }
+        
+        const result = await response.json();
+        availableFleetUnits = result.data; 
+    } catch (err) {
+        console.error('Fetch Available Fleet Units Error:', err);
+        showStatusMessage(`Fetch Available Fleet Units Error: ${err.message}`, 'error');
+    }
 }
+
+async function fetchAllFleetUnits() {
+    try {
+        const response = await fetch(API_TRUCKS_URL, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return; // CRITICAL: Check for auth error
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} (${response.statusText})`);
+        }
+        
+        const result = await response.json();
+        allFleetUnits = result.data; 
+    } catch (err) {
+        console.error('Fetch All Fleet Units Error:', err);
+    }
+}
+
+// =================================================================
+// 4. REPORT RENDERING & FILTERING
+// =================================================================
 
 function filterAndRenderReports() {
-    const filterStatus = $('#statusFilter').val();
-    let filteredReports = reportsData;
-
-    if (filterStatus !== 'All') {
-        filteredReports = reportsData.filter(report => report.status === filterStatus);
-    }
+    const selectedStatus = $('#statusFilter').val();
     
+    const filteredReports = reportsData.filter(report => {
+        if (selectedStatus === 'All') return true;
+        return report.status === selectedStatus;
+    });
+
+    updateSummaryCounts();
     renderReports(filteredReports);
 }
 
+function updateSummaryCounts() {
+    const counts = {
+        'Pending': 0,
+        'Assigned': 0,
+        'In Progress': 0,
+        'Cleared': 0
+    };
 
-// =================================================================
-// PART 3: REPORT RENDERING AND ACTIONS (Unchanged)
-// =================================================================
+    reportsData.forEach(report => {
+        if (counts.hasOwnProperty(report.status)) {
+            counts[report.status]++;
+        }
+    });
 
-function getTruckName(truckId) {
-    if (!truckId) return 'N/A';
-    // Only look in approved trucks for assignment display
-    const approvedTrucks = trucksData.filter(t => t.is_approved);
-    const truck = approvedTrucks.find(t => t._id === truckId);
-    return truck ? `${truck.license_plate} (${truck.driver_name})` : 'Truck Not Found';
+    $('#stat-pending').text(counts.Pending);
+    $('#stat-assigned').text(counts.Assigned);
+    $('#stat-in-progress').text(counts['In Progress']);
+    $('#stat-cleared').text(counts.Cleared);
 }
 
 function renderReports(reports) {
-    const tbody = $('#reportsTableBody');
-    tbody.empty(); 
+    const $container = $('#reportsContainer');
+    $container.empty();
 
     if (reports.length === 0) {
-        tbody.append(`<tr><td colspan="7" class="text-center py-4 text-gray-500">No reports found.</td></tr>`);
+        $('#noReportsMessage').removeClass('hidden');
         return;
+    } else {
+        $('#noReportsMessage').addClass('hidden');
     }
 
     reports.forEach(report => {
-        const date = new Date(report.date_created).toLocaleDateString('en-NG');
-        const statusClass = `status-${report.status.replace(/\s/g, '-')}`; 
-        const assignedTruck = getTruckName(report.assigned_to);
+        $container.append(createReportCardHTML(report));
+    });
 
-        let actionButtonHTML = '';
-        if (report.status === 'Pending') {
-            actionButtonHTML = `<button data-id="${report._id}" class="action-assign-btn bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-xs">Assign Truck</button>`;
-        } else if (report.status === 'Assigned') {
-             // Admin override to mark cleared (less common, but sometimes necessary)
-             actionButtonHTML = `<button data-id="${report._id}" class="action-clear-btn bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded text-xs">Mark Cleared</button>`;
-        } else if (report.status === 'In-Progress') {
-             // Driver has submitted proof, prompt review modal
-             actionButtonHTML = `<button data-id="${report._id}" class="action-clear-btn bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded text-xs font-bold">Review Proof</button>`;
-        } else {
-            actionButtonHTML = `<span class="text-gray-400">Cleared</span>`;
+    // Attach event listeners to the dynamically created buttons
+    $('.view-details-btn').off('click').on('click', function() {
+        const reportId = $(this).data('id');
+        const report = reportsData.find(r => r._id === reportId);
+        if (report) {
+            openDetailModal(report);
         }
-
-        const row = `
-            <tr id="report-${report._id}">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${report._id.substring(18)}...</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${report.location.name}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-700 font-semibold">${assignedTruck}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${report.description.substring(0, 30)}...</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm"><span class="px-2 inline-flex text-xs leading-5 rounded-full ${statusClass}">${report.status}</span></td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    ${actionButtonHTML}
-                    <button data-id="${report._id}" class="view-detail-btn text-blue-600 hover:text-blue-900 font-medium ml-2">Detail</button>
-                </td>
-            </tr>
-        `;
-        tbody.append(row);
     });
 }
 
 // =================================================================
-// PART 4: ASSIGNMENT LOGIC (Unchanged, uses filtered trucks)
+// 5. MODAL RENDERING FUNCTIONS
 // =================================================================
 
-function populateTruckSelect() {
-    const select = $('#truckSelect');
-    select.empty();
-    select.append('<option value="">-- Select a Truck --</option>');
+function openDetailModal(report) {
+    currentReportIdToAssign = report._id;
+
+    // A. Fill Report Details
+    $('#detailReportId').text(report._id);
+    $('#detailDescription').text(report.description);
+    $('#detailDateReported').text(formatDate(report.date_reported, true));
+    $('#detailLocationName').text(report.location ? report.location.location_name : 'N/A');
+    $('#detailStateLGA').text(report.location ? `${report.location.lga_city || 'N/A'}, ${report.location.state_area || 'N/A'}` : 'N/A');
+    $('#detailReporterPhone').text(report.reporter_phone);
     
-    // Only show AVAILABLE AND APPROVED trucks for assignment
-    trucksData.forEach(truck => {
-        if (truck.is_approved && truck.is_available) {
-             select.append(`<option value="${truck._id}">${truck.license_plate} - ${truck.driver_name} (${truck.capacity_tons}T)</option>`);
+    // B. Status and Assignment Button Logic
+    const { text, bg, border } = getStatusClass(report.status);
+    
+    // Update status pill
+    $('#detailStatus').text(report.status)
+                      .removeClass()
+                      .addClass(`inline-block px-3 py-1 rounded-full text-xs font-semibold ${text} ${bg} border-l-4 ${border}`);
+
+    // Update assignment info and button state (CRITICAL: Fleet Unit/Operator)
+    if (report.assigned_to) {
+        $('#detailAssignedTruck').html(`
+            <span class="font-bold">${report.assigned_to.license_plate}</span>
+            <span class="text-xs text-gray-500 block">${report.assigned_to.driver_name}</span>
+        `);
+        // Only allow re-assignment if not cleared
+        if (report.status !== 'Cleared') {
+            $('#openAssignmentModalBtn').text('Re-Assign Fleet Unit').removeClass('bg-indigo-600').addClass('bg-purple-600').prop('disabled', false).show();
+        } else {
+            $('#openAssignmentModalBtn').hide();
         }
+    } else {
+        $('#detailAssignedTruck').html('N/A (Unassigned)');
+        $('#openAssignmentModalBtn').text('Assign Fleet Unit').removeClass('bg-purple-600').addClass('bg-indigo-600').prop('disabled', false).show();
+    }
+    
+    // Hide assignment button if Cleared
+    if (report.status === 'Cleared') {
+        $('#openAssignmentModalBtn').hide();
+    }
+
+    // C. Image/Proof Logic
+    $('#detailOriginalImage').attr('src', report.image_url);
+    $('#detailOriginalImageLink').attr('href', report.image_url);
+
+    if (report.proof_of_clearance && report.proof_of_clearance.image_url) {
+        $('#proofContainer').removeClass('hidden');
+        $('#detailProofImage').attr('src', report.proof_of_clearance.image_url);
+        $('#detailProofImageLink').attr('href', report.proof_of_clearance.image_url);
+        $('#detailProofNotes').text(report.proof_of_clearance.notes || 'No notes provided.');
+        $('#detailProofDate').text(formatDate(report.proof_of_clearance.date_cleared, true));
+    } else {
+        $('#proofContainer').addClass('hidden');
+        $('#detailProofNotes').text('');
+    }
+
+    // D. Map Rendering (CRITICAL FIX APPLIED HERE)
+    let locationCoords = null;
+    const coordsString = report.location_coordinates;
+    
+    if (coordsString && typeof coordsString === 'string') {
+        try {
+            // This is the line that was crashing when coordsString was "undefined"
+            locationCoords = JSON.parse(coordsString);
+        } catch (e) {
+            console.warn('Error parsing location coordinates JSON (This is the fix):', e);
+            // locationCoords remains null, preventing the map from initializing
+        }
+    }
+
+    // Initialize map only if we have valid coordinates
+    if (locationCoords && locationCoords.lat && locationCoords.lng) {
+        initializeMap('detailMap', locationCoords);
+        $('#detailMapContainer').removeClass('hidden');
+    } else {
+        // Hide the map container if coordinates are invalid or missing
+        $('#detailMapContainer').addClass('hidden');
+    }
+
+    // E. Show Modal
+    $('#detailModal').removeClass('hidden');
+}
+
+function initializeMap(mapElementId, locationCoords) {
+    // If map already exists, destroy it before creating a new one
+    if (detailMap) {
+        detailMap.remove();
+    }
+    
+    // Create new map instance
+    detailMap = L.map(mapElementId).setView([locationCoords.lat, locationCoords.lng], 15);
+
+    // Add base tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(detailMap);
+
+    // Add marker
+    L.marker([locationCoords.lat, locationCoords.lng]).addTo(detailMap)
+        .bindPopup('Incident Location')
+        .openPopup();
+}
+
+function closeDetailModal() {
+    $('#detailModal').addClass('hidden');
+    // Important: destroy the map instance to prevent rendering issues if another one is created
+    if (detailMap) {
+        detailMap.remove();
+        detailMap = null;
+    }
+}
+
+function openAssignmentModal(reportId) {
+    currentReportIdToAssign = reportId;
+    $('#reportIdSnippet').text(reportId.substring(0, 8) + '...');
+    
+    // Render available fleet units into the dropdown
+    const $truckSelect = $('#truckSelect');
+    $truckSelect.empty();
+    $truckSelect.append('<option value="">-- Select Fleet Unit --</option>');
+    
+    availableFleetUnits.forEach(unit => { 
+        $truckSelect.append(
+            `<option value="${unit._id}">${unit.license_plate} (${unit.driver_name})</option>`
+        );
     });
-}
 
-function openAssignTruckModal(e) {
-    currentReportIdToAssign = $(e.currentTarget).data('id');
-    $('#reportIdToAssign').text(`Report ID: ${currentReportIdToAssign.substring(0, 8)}...`);
-    $('#assignTruckModal').removeClass('hidden').addClass('flex');
-}
-
-function hideAssignTruckModal() {
-    $('#assignTruckModal').removeClass('flex').addClass('hidden');
-    currentReportIdToAssign = null;
-    $('#truckSelect').val(''); // Reset selection
-}
-
-async function handleAssignTruck() {
-    const truckId = $('#truckSelect').val();
-    const reportId = currentReportIdToAssign;
-    
-    if (!truckId || !reportId) {
-        return showStatusMessage('Please select a truck.', 'error');
+    // Check current assignment status
+    const currentReport = reportsData.find(r => r._id === reportId);
+    if (currentReport && currentReport.assigned_to) {
+        // Pre-select the currently assigned unit
+        $truckSelect.val(currentReport.assigned_to._id);
+        $('#unassignTruckBtn').removeClass('hidden');
+        $('#assignTruckSubmitBtn').text('Update Assignment');
+    } else {
+        $truckSelect.val(''); // Ensure nothing is selected
+        $('#unassignTruckBtn').addClass('hidden');
+        $('#assignTruckSubmitBtn').text('Assign Unit');
     }
-    
-    const token = localStorage.getItem('adminToken');
-    showStatusMessage('Assigning truck...', 'info');
 
-    try {
-        const response = await fetch(`${API_REPORTS_URL}/${reportId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json',
-            },
-            // Update status, assigned_to, and date_assigned
-            body: JSON.stringify({ 
-                status: 'Assigned', 
-                assigned_to: truckId,
-                date_assigned: new Date().toISOString()
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showStatusMessage(`Report ${reportId.substring(0, 8)} assigned successfully!`, 'success');
-            // Fetch both to update the main reports list and the truck's availability status
-            Promise.all([fetchReports(), fetchTrucks()]); 
-        } else {
-            showStatusMessage(data.error || 'Failed to assign truck.', 'error');
-        }
-
-    } catch (err) {
-        showStatusMessage('Network error during assignment.', 'error');
-    } finally {
-        hideAssignTruckModal();
-        hideStatusMessage(2000);
-    }
+    // Reset messages and show modal
+    $('#assignmentMessage').addClass('hidden').empty();
+    $('#assignmentModal').removeClass('hidden');
 }
 
-
-// =================================================================
-// PART 5: PROOF REVIEW LOGIC (Unchanged)
-// =================================================================
-
-function handleMarkClearedOrReview(e) {
-    const reportId = $(e.currentTarget).data('id');
-    const report = reportsData.find(r => r._id === reportId);
-
-    if (!report) return;
-
-    if (report.status === 'In-Progress') {
-        // Driver has submitted proof, open the review modal
-        openProofReviewModal(report);
-    } else if (report.status === 'Assigned') {
-        // Admin override: Allows admin to clear the report without waiting for proof
-        if (confirm(`Are you sure you want to mark report ${reportId.substring(0, 8)} as CLEARED? This bypasses the driver proof submission.`)) {
-            handleMarkCleared(reportId);
-        }
-    }
+function closeAssignmentModal() {
+    $('#assignmentModal').addClass('hidden');
+    $('#assignTruckSubmitBtn').prop('disabled', false); // Ensure button is re-enabled
 }
-
-async function handleMarkCleared(reportId) {
-    const token = localStorage.getItem('adminToken');
-    showStatusMessage(`Marking report ${reportId.substring(0, 8)} as CLEARED...`, 'info');
-
-    try {
-        const response = await fetch(`${API_REPORTS_URL}/${reportId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                status: 'Cleared',
-                date_cleared: new Date().toISOString()
-            })
-        });
-
-        if (response.ok) {
-            showStatusMessage(`Report ${reportId.substring(0, 8)} CLEARED successfully!`, 'success');
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to clear report.', 'error');
-        }
-    } catch (err) {
-        showStatusMessage('Network error during clearance.', 'error');
-    } finally {
-        fetchReports(); 
-        hideStatusMessage(2000);
-    }
-}
-
-function openProofReviewModal(report) {
-    const truckName = getTruckName(report.assigned_to);
-    
-    // Populate modal fields
-    $('#proofReportId').text(report._id.substring(0, 8) + '...');
-    $('#proofDriverInfo').text(truckName);
-    $('#proofNotes').text(report.proof_notes || 'No notes provided by driver.');
-    
-    // Set image source (use placeholder if not available)
-    $('#proofImage').attr('src', report.proof_image_url || '/images/placeholder.jpg'); 
-
-    // Set the report ID on the action buttons
-    $('#approveClearanceBtn').data('report-id', report._id);
-    $('#rejectClearanceBtn').data('report-id', report._id);
-
-    $('#proofReviewModal').removeClass('hidden').addClass('flex');
-}
-
-function hideProofReviewModal() {
-    $('#proofReviewModal').removeClass('flex').addClass('hidden');
-}
-
-async function handleApproveClearance(e) {
-    const reportId = $(e.currentTarget).data('report-id');
-    const token = localStorage.getItem('adminToken');
-    
-    showStatusMessage(`Approving report ${reportId.substring(0, 8)}...`, 'info');
-
-    try {
-        const response = await fetch(`${API_REPORTS_URL}/${reportId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                status: 'Cleared',
-                date_cleared: new Date().toISOString()
-            })
-        });
-
-        if (response.ok) {
-            showStatusMessage(`Report ${reportId.substring(0, 8)} approved and CLEARED!`, 'success');
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to approve clearance.', 'error');
-        }
-    } catch (err) {
-        showStatusMessage('Network error during approval.', 'error');
-    } finally {
-        hideProofReviewModal();
-        fetchReports();
-        hideStatusMessage(2000);
-    }
-}
-
-async function handleRejectProof(e) {
-    const reportId = $(e.currentTarget).data('report-id'); 
-    const token = localStorage.getItem('adminToken');
-    
-    showStatusMessage(`Rejecting proof for report ${reportId.substring(0, 8)}...`, 'info');
-
-    try {
-        const response = await fetch(`${API_REPORTS_URL}/${reportId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json',
-            },
-            // Revert status to Assigned, clear proof fields so driver can resubmit
-            body: JSON.stringify({ 
-                status: 'Assigned',
-                proof_notes: null,
-                proof_image_url: null
-            }) 
-        });
-
-        if (response.ok) {
-            showStatusMessage(`Report ${reportId.substring(0, 8)} rejected. Status reverted to ASSIGNED.`, 'success');
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to reject proof.', 'error');
-        }
-    } catch (err) {
-        showStatusMessage('Network error during rejection.', 'error');
-    } finally {
-        hideProofReviewModal();
-        fetchReports();
-        hideStatusMessage(2000);
-    }
-}
-
-
-// =================================================================
-// PART 6: TRUCK & DRIVER MANAGEMENT LOGIC (REVISED)
-// =================================================================
 
 function openTruckModal() {
-    // Re-fetch trucks to ensure the list is up-to-date
-    fetchTrucks(); 
-    $('#truckManagementModal').removeClass('hidden').addClass('flex');
+    // Ensure we fetch the latest data just before opening the modal
+    fetchAllFleetUnits().then(() => {
+        renderAllTrucksToModal();
+        $('#truckModal').removeClass('hidden');
+    });
 }
 
 function closeTruckModal() {
-    $('#truckManagementModal').removeClass('flex').addClass('hidden');
-    // Important: Re-fetch reports/trucks in the background after closing, 
-    // in case availability was changed and the main dashboard needs updating.
-    Promise.all([fetchReports(), fetchTrucks()]);
+    $('#truckModal').addClass('hidden');
 }
 
 /**
- * Filters trucks data and calls separate rendering functions for approved and pending drivers.
- * Assuming truck objects now have an `is_approved` property.
+ * Renders the tables for All Fleet Units and Pending Operator Approvals.
  */
-function renderTruckManagementTables(trucks) {
-    // Filter into two groups based on the approval status
-    const approvedTrucks = trucks.filter(t => t.is_approved);
-    const pendingDrivers = trucks.filter(t => !t.is_approved);
+function renderAllTrucksToModal() {
+    const $allBody = $('#allTrucksTableBody');
+    const $pendingBody = $('#pendingDriversTableBody'); // Using 'Drivers' ID from HTML for consistency
+    $allBody.empty();
+    $pendingBody.empty();
+
+    const pendingUnits = allFleetUnits.filter(unit => unit.is_approved === false); 
+    const approvedUnits = allFleetUnits.filter(unit => unit.is_approved === true);
     
-    // Render Approved Trucks (CRUD: Toggle availability)
-    renderApprovedTrucks(approvedTrucks);
-    
-    // Render Pending Drivers (Review: Approve/Reject)
-    renderPendingDrivers(pendingDrivers);
+    // --- Approved Units Table ---
+    if (approvedUnits.length === 0) {
+        $('#noAllTrucksMessage').removeClass('hidden');
+    } else {
+        $('#noAllTrucksMessage').addClass('hidden');
+        approvedUnits.forEach(unit => {
+            const statusClass = unit.is_assigned ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+            const driverInfo = unit.driver_id ? `${unit.driver_id.username} (${unit.driver_id.email})` : 'N/A';
+            $allBody.append(`
+                <tr id="unit-row-${unit._id}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${unit.license_plate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${driverInfo}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${unit.capacity_m3} m³</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${unit.is_assigned ? 'Busy (Assigned)' : 'Available'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">Yes</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="handleDeleteTruck('${unit._id}')" class="text-red-600 hover:text-red-900 ml-2">Delete</button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    // --- Pending Approvals Table ---
+    if (pendingUnits.length === 0) {
+        $('#noPendingDriversMessage').removeClass('hidden');
+    } else {
+        $('#noPendingDriversMessage').addClass('hidden');
+        pendingUnits.forEach(unit => {
+            const driverInfo = unit.driver_id ? unit.driver_id.username : 'N/A';
+            $pendingBody.append(`
+                <tr id="pending-unit-row-${unit._id}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">${unit.driver_id || unit._id.substring(0, 8) + '...'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${unit.license_plate} (${driverInfo})</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${unit.capacity_m3} m³</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="handleTruckApproval('${unit._id}')" class="text-green-600 hover:text-green-900">Approve</button>
+                        <button onclick="handleTruckRejection('${unit._id}')" class="text-red-600 hover:text-red-900 ml-2">Reject/Delete</button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
 }
 
+// =================================================================
+// 6. ACTION HANDLERS
+// =================================================================
 
-function renderApprovedTrucks(approvedTrucks) {
-    const tbody = $('#approvedTrucksTableBody'); // Target the new ID
-    tbody.empty();
+async function handleTruckAssignment(e) {
+    e.preventDefault();
+    const truckId = $('#truckSelect').val();
+    if (!truckId || !currentReportIdToAssign) {
+        showStatusMessage('Please select a Fleet Unit to assign.', 'error');
+        return;
+    }
+    const $submitBtn = $('#assignTruckSubmitBtn');
+    $submitBtn.prop('disabled', true).text('Updating...');
 
-    if (approvedTrucks.length === 0) {
-        tbody.append(`<tr><td colspan="5" class="text-center py-4 text-gray-500">No trucks in the active fleet.</td></tr>`);
+    try {
+        const response = await fetch(`${API_REPORTS_URL}/${currentReportIdToAssign}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            // Set assigned_to and update status to 'Assigned'
+            body: JSON.stringify({ assigned_to: truckId, status: 'Assigned' })
+        });
+        
+        if (handleAuthError(response)) return;
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        
+        showStatusMessage(`Incident Record ${result.data._id.substring(0, 8)}... successfully assigned to Fleet Unit ${result.data.assigned_to.license_plate}.`, 'success');
+        closeAssignmentModal();
+        await fetchAllData(); 
+    } catch (err) {
+        console.error('Assignment Error:', err);
+        showStatusMessage(`Assignment failed: ${err.message}`, 'error');
+    } finally {
+        $submitBtn.prop('disabled', false).text('Assign Unit');
+    }
+}
+
+async function handleUnassignment() {
+    if (!currentReportIdToAssign) return;
+
+    if (!confirm('Are you sure you want to unassign this Fleet Unit and set the Incident Record status back to Pending?')) {
         return;
     }
 
-    approvedTrucks.forEach(truck => {
-        const isAvailable = truck.is_available;
-        const statusText = isAvailable ? 'Available' : 'Busy';
-        const statusClass = isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-        const actionText = isAvailable ? 'Mark Busy' : 'Mark Available';
-        const actionClass = isAvailable ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600';
+    const $unassignBtn = $('#unassignTruckBtn');
+    $unassignBtn.prop('disabled', true).text('Unassigning...');
 
-        const row = `
-            <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${truck.license_plate}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${truck.driver_name}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${truck.capacity_tons}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">${statusText}</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <button data-id="${truck._id}" 
-                            data-is-available="${isAvailable}"
-                            class="toggle-truck-availability ${actionClass} text-white py-1 px-3 rounded text-xs transition">
-                        ${actionText}
-                    </button>
-                </td>
-            </tr>
-        `;
-        tbody.append(row);
-    });
+    try {
+        const response = await fetch(`${API_REPORTS_URL}/${currentReportIdToAssign}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            // Clear assigned_to and set status to 'Pending'
+            body: JSON.stringify({ assigned_to: null, status: 'Pending' })
+        });
+
+        if (handleAuthError(response)) return;
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} - ${errorText}`);
+        }
+
+        showStatusMessage(`Incident Record successfully unassigned. Status set to Pending.`, 'success');
+        closeAssignmentModal();
+        await fetchAllData();
+    } catch (err) {
+        console.error('Unassignment Error:', err);
+        showStatusMessage(`Unassignment failed: ${err.message}`, 'error');
+    } finally {
+        $unassignBtn.prop('disabled', false).text('Unassign & Set to Pending');
+    }
 }
 
-function renderPendingDrivers(pendingDrivers) {
-    const tbody = $('#pendingDriversTableBody'); // Target the new ID
-    tbody.empty();
-    
-    const noMessage = $('#noPendingDriversMessage');
-    
-    if (pendingDrivers.length === 0) {
-        noMessage.removeClass('hidden');
+async function handleDeleteReport() {
+    if (!currentReportIdToAssign) return;
+
+    if (!confirm(`Are you sure you want to permanently delete Incident Record ${currentReportIdToAssign.substring(0, 8)}...? This action cannot be undone.`)) {
         return;
     }
-    
-    noMessage.addClass('hidden');
 
-    pendingDrivers.forEach(driver => {
-        const row = `
-            <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${driver.driver_name || 'N/A'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${driver.license_plate || 'N/A'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${driver.capacity_tons || 'N/A'}T</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <button data-id="${driver._id}" class="action-approve-driver bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-xs mr-2">Approve</button>
-                    <button data-id="${driver._id}" class="action-reject-driver bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded text-xs">Reject</button>
-                </td>
-            </tr>
-        `;
-        tbody.append(row);
-    });
-}
-
-
-async function handleToggleTruckStatus(e) {
-    const truckId = $(e.currentTarget).data('id');
-    // data-is-available attribute is stored as a string, convert to boolean
-    const currentlyAvailable = $(e.currentTarget).data('is-available') === true; 
-    const newStatus = !currentlyAvailable;
-    const token = localStorage.getItem('adminToken');
-    
-    showStatusMessage(`Setting truck status to ${newStatus ? 'Available' : 'Busy'}...`, 'info');
+    const $deleteBtn = $('#deleteReportBtn');
+    $deleteBtn.prop('disabled', true).text('Deleting...');
 
     try {
-        const response = await fetch(`${API_TRUCKS_URL}/${truckId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ is_available: newStatus })
+        const response = await fetch(`${API_REPORTS_URL}/${currentReportIdToAssign}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(''), // No content type for DELETE
         });
 
-        if (response.ok) {
-            showStatusMessage('Truck status updated successfully!', 'success');
-            fetchTrucks(); // Refresh truck list and re-render table
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to update truck status.', 'error');
+        if (handleAuthError(response)) return;
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} - ${errorText}`);
         }
+
+        showStatusMessage(`Incident Record ${currentReportIdToAssign.substring(0, 8)}... successfully deleted.`, 'success');
+        closeDetailModal();
+        await fetchAllData();
     } catch (err) {
-        showStatusMessage('Network error during status update.', 'error');
+        console.error('Delete Report Error:', err);
+        showStatusMessage(`Deletion failed: ${err.message}`, 'error');
     } finally {
-        hideStatusMessage(2000);
+        $deleteBtn.prop('disabled', false).text('Delete Record');
     }
 }
 
-async function handleApproveDriver(e) {
-    const truckId = $(e.currentTarget).data('id');
-    const token = localStorage.getItem('adminToken');
-    
-    showStatusMessage('Approving new driver and truck...', 'info');
+async function handleTruckApproval(truckId) {
+    if (!confirm('Approve this Fleet Unit? The operator will be notified and can start using the app.')) return;
+    updateTruckStatus(truckId, { is_approved: true }, 'approved');
+}
 
+async function handleTruckRejection(truckId) {
+    if (!confirm('Reject and delete this Fleet Unit registration? This will also delete the associated operator account.')) return;
+    deleteTruck(truckId);
+}
+
+async function handleDeleteTruck(truckId) {
+    if (!confirm('Are you sure you want to delete this Fleet Unit and the associated operator account?')) return;
+    deleteTruck(truckId);
+}
+
+async function updateTruckStatus(truckId, data, actionType) {
     try {
         const response = await fetch(`${API_TRUCKS_URL}/${truckId}`, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            // Set is_approved to true and make the truck available
-            body: JSON.stringify({ is_approved: true, is_available: true }) 
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
         });
 
-        if (response.ok) {
-            showStatusMessage('Driver and truck approved successfully!', 'success');
-            fetchTrucks(); // Refresh to move the entry to the Approved table
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to approve driver.', 'error');
+        if (handleAuthError(response)) return;
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} - ${errorText}`);
         }
+
+        const unit = allFleetUnits.find(u => u._id === truckId);
+        const operatorName = unit && unit.driver_id ? unit.driver_id.username : 'the Operator';
+
+        if (actionType === 'approved') {
+            showStatusMessage(`Fleet Unit ${unit.license_plate} approved! ${operatorName} can now log in.`, 'success');
+        } else {
+            showStatusMessage('Fleet Unit status updated successfully.', 'success');
+        }
+
+        // Re-fetch and re-render the modals
+        await fetchAllFleetUnits();
+        renderAllTrucksToModal();
     } catch (err) {
-        showStatusMessage('Network error during approval.', 'error');
-    } finally {
-        hideStatusMessage(2000);
+        console.error('Update Fleet Unit Error:', err);
+        showStatusMessage(`Update failed: ${err.message}`, 'error');
     }
 }
 
-async function handleRejectDriver(e) {
-    const truckId = $(e.currentTarget).data('id');
-    
-    if (!confirm("Are you sure you want to reject this driver's submission? This action may delete the entry.")) return;
-
-    const token = localStorage.getItem('adminToken');
-    showStatusMessage('Rejecting driver submission...', 'info');
-
+async function deleteTruck(truckId) {
     try {
-        // Assuming rejection means deleting the temporary or incomplete truck record
         const response = await fetch(`${API_TRUCKS_URL}/${truckId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
+            headers: getAuthHeaders('')
         });
 
-        if (response.ok) {
-            showStatusMessage('Driver submission rejected and removed.', 'success');
-            fetchTrucks(); // Refresh the pending list
-        } else {
-            const data = await response.json();
-            showStatusMessage(data.error || 'Failed to reject and remove submission.', 'error');
+        if (handleAuthError(response)) return;
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error Status: ${response.status} - ${errorText}`);
         }
+
+        showStatusMessage('Fleet Unit and associated operator account successfully deleted.', 'success');
+
+        // Re-fetch and re-render the modals
+        await fetchAllFleetUnits();
+        renderAllTrucksToModal();
     } catch (err) {
-        showStatusMessage('Network error during rejection.', 'error');
-    } finally {
-        hideStatusMessage(2000);
+        console.error('Delete Fleet Unit Error:', err);
+        showStatusMessage(`Deletion failed: ${err.message}`, 'error');
     }
 }
 
 
 // =================================================================
-// PART 7: UTILITIES AND INITIAL CALL (Unchanged)
+// 9. UTILITIES
 // =================================================================
 
 function handleLogout() {
     localStorage.removeItem('adminToken');
-    window.location.href = 'admin-login.html';
-}
-
-function showDetailModal(e) {
-    // This is a placeholder for a full detail view of a report
-    const reportId = $(e.currentTarget).data('id');
-    const report = reportsData.find(r => r._id === reportId);
-    if (report) {
-        alert(`Details for Report ${report._id.substring(0, 8)}...\n\nDescription: ${report.description}\n\nLatitude: ${report.location.lat}\nLongitude: ${report.location.lon}`);
-    }
+    window.location.href = ADMIN_LOGIN_URL;
 }
 
 function showStatusMessage(text, type) {
@@ -643,17 +680,99 @@ function showStatusMessage(text, type) {
     } else { // info
         messageDiv.addClass('bg-blue-100 text-blue-700').html(`ℹ️ ${text}`).show();
     }
+    hideStatusMessage(5000);
 }
 
-function hideStatusMessage(delay = 0) {
-    if (delay > 0) {
-        setTimeout(() => $('#statusMessage').hide(), delay);
-    } else {
-        $('#statusMessage').hide();
+function hideStatusMessage(delay = 4000) {
+    setTimeout(() => {
+        $('#statusMessage').fadeOut('slow');
+    }, delay);
+}
+
+function formatDate(dateString, includeTime = false) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    if (includeTime) {
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+        options.hour12 = true;
+    }
+    return date.toLocaleDateString('en-US', options);
+}
+
+/**
+ * Gets the Tailwind CSS classes for a report status card.
+ */
+function getStatusClass(status) {
+    switch (status) {
+        case 'Pending':
+            // Yellow/Amber for New/Pending reports
+            return { border: 'border-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' };
+        case 'Assigned':
+            // Indigo for assigned reports
+            return { border: 'border-indigo-600', bg: 'bg-indigo-50', text: 'text-indigo-700' };
+        case 'In Progress':
+        case 'In-Progress': 
+            // Blue for reports that are actively being cleared
+            return { border: 'border-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' };
+        case 'Cleared':
+            // Green for completed reports
+            return { border: 'border-green-600', bg: 'bg-green-50', text: 'text-green-700' };
+        default:
+            // Gray fallback
+            return { border: 'border-gray-300', bg: 'bg-gray-100', text: 'text-gray-700' };
     }
 }
 
-// Start the application flow
-$(document).ready(function() {
-    checkAuthAndInit();
-});
+/**
+ * Generates the HTML for a single report card in the dashboard.
+ * Includes the CRITICAL FIX for location data display.
+ * @param {Object} report The report object from the API.
+ * @returns {string} The HTML string for the report card.
+ */
+function createReportCardHTML(report) {
+    const { border, bg, text } = getStatusClass(report.status);
+    
+    const formattedDate = formatDate(report.date_reported); 
+    
+    // CRITICAL UPDATE: Fleet Unit terminology change
+    const truckInfo = report.assigned_to 
+        ? report.assigned_to.license_plate
+        : 'Not Assigned';
+
+    // CRITICAL FIX: Ensure location data is accessed correctly
+    const location = report.location || {}; 
+    let locationDisplay;
+    if (location.location_name && location.location_name !== 'undefined') {
+        locationDisplay = location.location_name;
+    } else if (location.lga_city && location.state_area) {
+        locationDisplay = `${location.lga_city}, ${location.state_area}`;
+    } else {
+        locationDisplay = 'Location Unknown';
+    }
+
+    return `
+        <div class="report-card p-4 rounded-lg shadow-md ${bg} ${border}" data-status="${report.status}">
+            <div class="flex items-start justify-between">
+                <p class="text-xs font-semibold uppercase ${text} mb-2">${report.status}</p>
+                <button 
+                    class="view-details-btn text-sm text-indigo-600 hover:text-indigo-800 font-medium transition"
+                    data-id="${report._id}"
+                >
+                    View Details
+                </button>
+            </div>
+            
+            <p class="text-sm font-mono text-gray-500 truncate mb-2">Record ID: ${report._id.substring(0, 8)}...</p>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-2">${report.description.substring(0, 30)}...</h3>
+            
+            <div class="space-y-1 text-sm text-gray-700">
+                <p><i class="fas fa-map-marker-alt text-red-500 w-4 mr-2"></i> ${locationDisplay}</p>
+                <p><i class="fas fa-truck text-green-600 w-4 mr-2"></i> Fleet Unit: <span class="font-semibold">${truckInfo}</span></p>
+                <p><i class="fas fa-clock text-gray-500 w-4 mr-2"></i> Date: ${formattedDate}</p>
+            </div>
+        </div>
+    `;
+}
