@@ -1,95 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title id="pageTitle">Fleet Operator Login | EMIWIP</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: {
+                            600: '#4f46e5',
+                            700: '#4338ca'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
     <style>
-        .auth-card {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        .text-indigo-600 { color: #4f46e5; }
-        .bg-indigo-600 { background-color: #4f46e5; }
-        .hover\:bg-indigo-700:hover { background-color: #4338ca; }
+
+        .auth-card {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            border-radius: 2rem;
+        }
+
+        #statusMessage {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input:focus {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-    <div id="statusMessage" class="hidden fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium"></div>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6">
+
+    <div
+        id="statusMessage"
+        class="hidden fixed top-6 right-6 z-50 p-4 rounded-2xl shadow-2xl text-white font-bold text-sm min-w-[300px]"
+    ></div>
 
     <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold text-gray-900">
-                <span class="text-indigo-600">EMIWIP</span> Fleet Operator Portal
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-black text-slate-900 tracking-tighter uppercase">
+                EMIWIP
             </h1>
-            <p id="subTitle" class="text-lg text-gray-600 mt-2">Sign in to start your session</p>
+            <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">
+                Environmental Management System
+            </p>
         </div>
 
-        <div class="bg-white p-8 rounded-xl auth-card">
-            
+        <div class="bg-white auth-card p-10 border border-slate-100">
+
             <div id="loginSection">
-                <form id="loginForm" class="space-y-6">
+                <h2 class="text-2xl font-extrabold text-slate-800 mb-2">
+                    Fleet Operator Login
+                </h2>
+                <p class="text-slate-400 text-sm mb-8 font-medium">
+                    Access your assigned waste collection tasks.
+                </p>
+
+                <form id="loginForm" class="space-y-5" novalidate>
                     <div>
-                        <label for="loginEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input type="email" id="loginEmail" name="email" required autocomplete="email" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Email Address
+                        </label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            placeholder="operator@emiwip.com"
+                            required
+                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all"
+                        />
                     </div>
+
                     <div>
-                        <label for="loginPassword" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="loginPassword" name="password" required autocomplete="current-password" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Security Password
+                        </label>
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            placeholder="••••••••"
+                            required
+                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all"
+                        />
                     </div>
-                    
-                    <button type="submit" id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
-                        Sign In
+
+                    <button
+                        type="submit"
+                        id="loginBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs tracking-widest transition-all active:scale-95"
+                    >
+                        Sign In to Fleet
                     </button>
                 </form>
-                
-                <p class="mt-6 text-center text-sm">
-                    Don't have an account? 
-                    <button id="showRegisterBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Register Fleet Unit</button>
+
+                <p class="mt-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    New Operator?
+                    <button id="showRegisterBtn" type="button" class="text-indigo-600 hover:underline font-black">
+                        Register Account
+                    </button>
                 </p>
             </div>
 
             <div id="registerSection" class="hidden">
-                <p class="text-sm text-center text-gray-500 mb-4">Register your account and truck details for Portal Manager approval.</p>
-                <form id="registerForm" class="space-y-4">
+                <h2 class="text-2xl font-extrabold text-slate-800 mb-2">
+                    Driver Enrollment
+                </h2>
+                <p class="text-slate-400 text-sm mb-8 font-medium">
+                    Register your account for administrative approval.
+                </p>
+
+                <form id="registerForm" class="space-y-4" novalidate>
                     <div>
-                        <label for="registerUsername" class="block text-sm font-medium text-gray-700">Full Name / Username</label>
-                        <input type="text" id="registerUsername" name="username" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="registerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input type="email" id="registerEmail" name="email" required autocomplete="email" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="registerPassword" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="registerPassword" name="password" required autocomplete="new-password" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    
-                    <div class="pt-2">
-                        <h3 class="text-md font-semibold text-gray-800 border-t pt-4">Fleet Unit Details</h3>
-                    </div>
-                    <div>
-                        <label for="registerLicensePlate" class="block text-sm font-medium text-gray-700">License Plate Number</label>
-                        <input type="text" id="registerLicensePlate" name="license_plate" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500 uppercase">
-                    </div>
-                    <div>
-                        <label for="registerCapacityTons" class="block text-sm font-medium text-gray-700">Capacity (Tons/m³)</label>
-                        <input type="number" step="0.1" id="registerCapacityTons" name="capacity_tons" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                            Full Name
+                        </label>
+                        <input
+                            type="text"
+                            id="registerUsername"
+                            required
+                            placeholder="Enter full name"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
+                        />
                     </div>
 
-                    <button type="submit" id="registerBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150">
-                        Register Fleet Unit
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                            Email Address
+                        </label>
+                        <input
+                            type="email"
+                            id="registerEmail"
+                            required
+                            placeholder="driver@example.com"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                            Account Password
+                        </label>
+                        <input
+                            type="password"
+                            id="registerPassword"
+                            required
+                            placeholder="Create password"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100">
+                        <p class="text-[9px] font-black text-indigo-600 uppercase mb-3 tracking-[0.2em]">Vehicle Specifications</p>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                                    License Plate
+                                </label>
+                                <input
+                                    type="text"
+                                    id="registerLicensePlate"
+                                    placeholder="ABC-1234"
+                                    required
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                                    Capacity (Tons)
+                                </label>
+                                <input
+                                    type="number"
+                                    id="registerCapacityTons"
+                                    placeholder="5.0"
+                                    step="0.1"
+                                    required
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="registerBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs mt-4 transition-all active:scale-95"
+                    >
+                        Submit Registration
                     </button>
                 </form>
-                
-                <p class="mt-6 text-center text-sm">
-                    Already registered? 
-                    <button id="showLoginBtn" class="font-medium text-indigo-600 hover:text-indigo-500 transition duration-150">Login here</button>
+
+                <p class="mt-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Registered?
+                    <button id="showLoginBtn" type="button" class="text-indigo-600 hover:underline font-black">
+                        Login here
+                    </button>
                 </p>
             </div>
-            
         </div>
     </div>
 

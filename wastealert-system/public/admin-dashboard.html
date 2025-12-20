@@ -2,303 +2,194 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>EMIWIP | Portal Manager Dashboard</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | EMIWIP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    
+    <script>
+      window.tailwind = {
+        config: {
+          theme: {
+            extend: {
+              colors: {
+                indigo: { 900: '#1e1b4b', 800: '#312e81', 600: '#4f46e5' },
+                slate: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Custom modal backdrop and map styles for Leaflet to render correctly */
-        .modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.75);
-        }
-        #detailMap, #assignmentMap {
-            height: 300px;
-            width: 100%;
-            border-radius: 0.5rem;
-            z-index: 10; /* Important for Leaflet to show above other elements in the modal */
-        }
-        /* Custom styling for status cards (for border-left) */
-        .report-card {
-            border-left-width: 4px;
-        }
-        /* Utility for hiding elements without affecting layout until content is ready */
-        .invisible-until-loaded {
-            visibility: hidden;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .active-nav { background: #312e81; border-left: 4px solid #818cf8; color: white !important; }
+        .modal-backdrop { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
+        .status-badge { padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        /* Smooth Scrollbar for Tables */
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
 
-    <div id="statusMessage" class="hidden"></div>
+    <div id="statusMessage" class="hidden fixed top-6 right-6 z-[100] p-4 rounded-2xl shadow-2xl text-white font-bold text-sm min-w-[280px] animate-bounce-in"></div>
 
-    <header class="bg-white shadow sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <a href="#" class="text-xl font-bold text-gray-900">🌱 EMIWIP Portal Management</a>
-                
-                <nav class="hidden md:flex items-center space-x-4">
-                    <button id="manageTrucksBtnDesktop" class="text-gray-600 hover:text-purple-700 font-medium py-2 px-3 rounded transition">
-                        🚛 Manage Fleet Units
-                    </button>
-                    <button id="logoutBtnDesktop" class="text-white bg-red-600 hover:bg-red-700 font-medium py-2 px-4 rounded transition">
-                        Logout
-                    </button>
-                </nav>
-                
-                <div class="md:hidden">
-                    <button id="mobileMenuBtn" type="button" class="text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md p-2">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                        </svg>
-                    </button>
+    <div class="flex min-h-screen relative">
+        <aside id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 w-72 bg-indigo-900 text-white z-50 lg:translate-x-0 -translate-x-full shadow-2xl lg:shadow-none">
+            <div class="p-8 border-b border-indigo-800 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-leaf text-white text-xs"></i>
+                    </div>
+                    <h1 class="text-xl font-black tracking-tighter uppercase">Emiwip</h1>
                 </div>
-            </div>
-        </div>
-        
-        <div id="mobileMenu" class="md:hidden hidden">
-            <div class="pt-2 pb-3 space-y-1 px-2">
-                <button id="manageTrucksBtnMobile" class="block w-full text-left text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-purple-700 py-2 px-3 rounded-md">
-                    🚛 Manage Fleet Units
-                </button>
-                <button id="logoutBtnMobile" class="block w-full text-left text-base font-medium text-white bg-red-600 hover:bg-red-700 py-2 px-4 rounded-md mt-2">
-                    Logout
+                <button id="closeSidebarBtn" class="lg:hidden text-indigo-400 hover:text-white transition-colors">
+                    <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div class="px-4 py-6 sm:px-0">
-            <div class="mb-8 p-4 bg-white shadow-xl rounded-lg">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">Incident Records Overview</h2>
+            
+            <nav class="mt-8 px-4 space-y-2">
+                <button id="navDashboard" class="nav-item active-nav w-full flex items-center px-6 py-4 rounded-xl font-bold transition-all text-indigo-300 hover:text-white">
+                    <i class="fas fa-chart-pie mr-4"></i> Overview
+                </button>
+                <button id="navFleet" class="nav-item w-full flex items-center px-6 py-4 rounded-xl font-bold transition-all text-indigo-300 hover:bg-indigo-800 hover:text-white">
+                    <i class="fas fa-truck-monster mr-4"></i> Fleet & Drivers
+                </button>
                 
-                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                    <div id="statsSummary" class="flex flex-wrap gap-4">
-                        <div class="p-3 bg-amber-50 border-l-4 border-amber-500 rounded shadow-sm">
-                            <p class="text-sm font-medium text-amber-700">Pending</p>
-                            <p id="stat-pending" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
-                        <div class="p-3 bg-indigo-50 border-l-4 border-indigo-600 rounded shadow-sm">
-                            <p class="text-sm font-medium text-indigo-700">Assigned</p>
-                            <p id="stat-assigned" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
-                        <div class="p-3 bg-blue-50 border-l-4 border-blue-500 rounded shadow-sm">
-                            <p class="text-sm font-medium text-blue-700">In Progress</p>
-                            <p id="stat-in-progress" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
-                        <div class="p-3 bg-green-50 border-l-4 border-green-600 rounded shadow-sm">
-                            <p class="text-sm font-medium text-green-700">Cleared</p>
-                            <p id="stat-cleared" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3">
-                        <label for="statusFilter" class="text-sm font-medium text-gray-700">Filter by Status:</label>
-                        <select id="statusFilter" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                            <option value="All">All Records</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Assigned">Assigned</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Cleared">Cleared</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="reportsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div id="loadingMessage" class="col-span-full text-center py-10 text-gray-500 text-lg">
-                        <i class="fas fa-spinner fa-spin mr-2"></i> Loading records...
-                    </div>
-                    <div id="noReportsMessage" class="col-span-full text-center py-10 text-gray-500 text-lg hidden">
-                        No records found for the selected filter.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div id="detailModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all relative z-50">
-                
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-900">Incident Record Details</h3>
-                    <button type="button" id="closeDetailModalBtn" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times fa-lg"></i>
+                <div class="pt-10 border-t border-indigo-800/50 mt-10 px-6">
+                    <p class="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">System</p>
+                    <button onclick="handleLogout()" class="w-full flex items-center py-3 text-red-400 font-bold hover:text-red-300 transition-colors">
+                        <i class="fas fa-power-off mr-4"></i> Logout
                     </button>
                 </div>
+            </nav>
+        </aside>
 
-                <div class="p-6 grid grid-cols-2 gap-6">
+        <main class="flex-1 min-w-0 overflow-hidden">
+            <header class="bg-white/80 backdrop-blur-md border-b p-4 lg:p-6 flex justify-between items-center sticky top-0 z-40">
+                <div class="flex items-center gap-4">
+                    <button id="mobileMenuBtn" class="lg:hidden w-10 h-10 flex items-center justify-center bg-slate-100 rounded-xl text-slate-600">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <div>
-                        <p class="text-sm font-medium text-gray-500">Record ID</p>
-                        <p id="detailReportId" class="text-gray-900 mb-4 font-mono text-xs"></p>
-
-                        <p class="text-sm font-medium text-gray-500">Status</p>
-                        <p id="detailStatus" class="text-lg font-semibold mb-4"></p>
-
-                        <p class="text-sm font-medium text-gray-500">Description</p>
-                        <p id="detailDescription" class="text-gray-900 mb-4"></p>
-
-                        <p class="text-sm font-medium text-gray-500">Reported Date</p>
-                        <p id="detailDateReported" class="text-gray-900 mb-4"></p>
-                    </div>
-
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Location Name</p>
-                        <p id="detailLocationName" class="text-gray-900 mb-4"></p>
-
-                        <p class="text-sm font-medium text-gray-500">State / LGA</p>
-                        <p id="detailStateLGA" class="text-gray-900 mb-4"></p>
-
-                        <p class="text-sm font-medium text-gray-500">Assigned Fleet Unit</p>
-                        <p id="detailAssignedTruck" class="text-gray-900 mb-4 font-semibold">N/A</p>
-
-                        <p class="text-sm font-medium text-gray-500">Reporter Contact</p>
-                        <p id="detailReporterPhone" class="text-gray-900 mb-4 font-semibold"></p>
+                        <h2 id="pageTitle" class="text-lg lg:text-xl font-black text-slate-800 uppercase tracking-tight leading-none">Management Console</h2>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mt-1 hidden sm:block">Admin Authorization Required</p>
                     </div>
                 </div>
+                <button id="refreshDataBtn" class="w-10 h-10 lg:w-12 lg:h-12 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm flex items-center justify-center">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </header>
 
-                <div class="p-6 border-t border-gray-200 grid grid-cols-2 gap-6">
-                    <div>
-                        <p class="text-lg font-semibold text-gray-800 mb-2">Original Incident Image</p>
-                        <a id="detailOriginalImageLink" href="#" target="_blank">
-                            <img id="detailOriginalImage" src="" alt="Report Image" class="w-full h-48 object-cover rounded-md shadow-md hover:opacity-75 transition">
-                        </a>
-                    </div>
-                    <div id="proofContainer" class="hidden">
-                        <p class="text-lg font-semibold text-gray-800 mb-2">Proof of Clearance</p>
-                        <p id="detailProofNotes" class="text-gray-900 font-semibold mb-2"></p>
-                        <a id="detailProofImageLink" href="#" target="_blank" class="block">
-                            <img id="detailProofImage" src="" alt="Proof Image" class="w-full h-48 object-cover rounded-md shadow-md hover:opacity-75 transition">
-                        </a>
-                        <p class="text-xs text-gray-500 mt-2">Submitted: <span id="detailProofDate"></span></p>
-                    </div>
-                </div>
+            <div class="p-4 lg:p-8 max-w-7xl mx-auto space-y-8">
                 
-                <div id="detailMapContainer" class="p-6 border-t border-gray-200">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-2">Location Map</h4>
-                    <div id="detailMap"></div>
-                </div>
-
-                <div class="p-6 border-t border-gray-200 flex justify-between items-center">
-                    <button type="button" id="deleteReportBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                        Delete Record
-                    </button>
-                    <button type="button" id="openAssignmentModalBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        Assign Fleet Unit
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-    
-    <div id="assignmentModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all relative z-50">
-                
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-900">Assign Fleet Unit to Record <span id="reportIdSnippet" class="text-base font-mono text-gray-500"></span></h3>
-                    <button type="button" id="closeAssignmentModalBtn" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times fa-lg"></i>
-                    </button>
-                </div>
-
-                <form id="assignmentForm" class="p-6">
-                    <div class="mb-4">
-                        <label for="truckSelect" class="block text-sm font-medium text-gray-700">Select Available Fleet Unit/Operator</label>
-                        <select id="truckSelect" name="assigned_to" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="">-- Loading Fleet Units --</option>
-                            </select>
+                <section id="wasteOverview" class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+                    <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
+                        <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending</p>
+                            <h3 id="statPending" class="text-2xl font-black text-slate-800 leading-none">0</h3>
+                        </div>
                     </div>
-                    
-                    <div id="assignmentMessage" class="hidden p-3 mb-4 rounded-lg text-center font-medium"></div>
-
-                    <div class="flex justify-end space-x-4">
-                        <button type="button" id="unassignTruckBtn" class="hidden py-2 px-4 border rounded-md shadow-sm text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200">
-                            Unassign & Set to Pending
-                        </button>
-                        <button type="submit" id="assignTruckSubmitBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                            Assign Unit
-                        </button>
+                    <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 text-indigo-600">
+                        <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fas fa-truck-loading"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Progress</p>
+                            <h3 id="statActive" class="text-2xl font-black text-slate-800 leading-none">0</h3>
+                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <div id="truckModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl transform transition-all relative z-50">
-                
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-900">🚛 Fleet Unit & Operator Management</h3>
-                    <button type="button" id="closeTruckModalBtn" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times fa-lg"></i>
-                    </button>
-                </div>
-
-                <section class="p-6 border-b border-gray-200">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-3">All Registered Fleet Units</h4>
-                    <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-300">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License Plate</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity (m³)</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approved</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allTrucksTableBody" class="bg-white divide-y divide-gray-200">
-                                </tbody>
-                        </table>
+                    <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5">
+                        <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cleared</p>
+                            <h3 id="statCleared" class="text-2xl font-black text-slate-800 leading-none">0</h3>
+                        </div>
                     </div>
-                    <div id="noAllTrucksMessage" class="text-center py-4 text-gray-500 hidden">No registered fleet units found.</div>
                 </section>
 
-                <section class="p-6">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-3">Pending Operator Approvals</h4>
-                    <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-300">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted Plate</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted Capacity</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pendingDriversTableBody" class="bg-white divide-y divide-gray-200">
-                                </tbody>
-                        </table>
-                        <div id="noPendingDriversMessage" class="text-center py-4 text-gray-500 hidden">No operators awaiting approval.</div>
+                <section id="viewDashboard">
+                    <div class="flex items-center gap-6 border-b border-slate-200 mb-8 overflow-x-auto no-scrollbar">
+                        <button data-tab="pending" class="tab-btn pb-4 text-indigo-600 border-b-4 border-indigo-600 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Pending Tasks</button>
+                        <button data-tab="Active" class="tab-btn pb-4 text-gray-400 font-bold uppercase text-[10px] tracking-widest whitespace-nowrap">Active Ops</button>
+                        <button data-tab="Cleared" class="tab-btn pb-4 text-gray-400 font-bold uppercase text-[10px] tracking-widest whitespace-nowrap">History</button>
+                    </div>
+                    <div id="reportsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        </div>
+                </section>
+
+                <section id="viewFleet" class="hidden space-y-8 lg:space-y-12 pb-20">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-sm lg:text-base font-black text-slate-800 uppercase flex items-center">
+                                <span class="w-2 h-6 bg-indigo-600 rounded-full mr-3"></span>
+                                Account Requests
+                            </h3>
+                        </div>
+                        <div class="bg-white rounded-[2rem] border overflow-hidden shadow-sm custom-scrollbar overflow-x-auto">
+                            <table class="w-full text-left min-w-[600px]">
+                                <thead class="bg-slate-50 border-b">
+                                    <tr>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400">Driver Name</th>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400">Email Address</th>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driverApprovalTable" class="divide-y divide-slate-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm lg:text-base font-black text-slate-800 uppercase mb-6 flex items-center">
+                            <span class="w-2 h-6 bg-indigo-600 rounded-full mr-3"></span>
+                            Unit Verification
+                        </h3>
+                        <div class="bg-white rounded-[2rem] border overflow-hidden shadow-sm custom-scrollbar overflow-x-auto">
+                            <table class="w-full text-left min-w-[700px]">
+                                <thead class="bg-slate-50 border-b">
+                                    <tr>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400">Plate ID</th>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400">Operator</th>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400">Status</th>
+                                        <th class="p-6 text-[10px] font-black uppercase text-slate-400 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fleetTableBody" class="divide-y divide-slate-50"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>
+        </main>
+    </div>
+
+    <div id="assignmentModal" class="modal-backdrop hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] p-8 lg:p-12 w-full max-w-lg shadow-2xl relative">
+            <h3 class="text-2xl font-black text-slate-900 mb-2">Deploy Unit</h3>
+            <p class="text-slate-400 text-xs font-bold uppercase mb-8">Assign a verified truck to this task</p>
+            
+            <form id="assignmentForm" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">Available Fleet</label>
+                    <select id="truckSelect" required class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-4">
+                    <button type="button" class="close-modal py-4 font-black text-[10px] uppercase text-slate-400 hover:bg-slate-50 rounded-xl transition-all">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 py-4 rounded-xl font-black text-[10px] uppercase text-white shadow-lg shadow-indigo-100 hover:scale-[1.02] transition-all active:scale-95">Confirm</button>
+                </div>
+            </form>
         </div>
     </div>
 
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="./js/admin-dashboard.js"></script> 
-    <script>
-        // Simple handler for the mobile menu button (toggles the mobile menu visibility)
-        $('#mobileMenuBtn').on('click', function() {
-            $('#mobileMenu').toggleClass('hidden');
-        });
-        
-        // All other complex bindings and logic are handled in 'admin-dashboard.js'
-    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/admin-dashboard.js"></script>
 </body>
 </html>

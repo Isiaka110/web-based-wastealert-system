@@ -1,379 +1,356 @@
-// public/js/driver-dashboard.js (EMIWIP FLEET OPERATOR DASHBOARD LOGIC - CRITICALLY CORRECTED)
+/**
+ * EMIWIP Driver Dashboard - Complete Functional Implementation
+ * Aligned with "Web-Enabled Environmental Waste Information Management System"
+ */
 
-// =================================================================
-// 1. CONSTANTS AND STATE
-// =================================================================
-
-const API_AUTH_URL = 'http://localhost:5000/api/drivers/auth';
-const API_ASSIGNED_REPORTS_URL = 'http://localhost:5000/api/reports/driver/assigned';
-const API_CLEARANCE_URL = 'http://localhost:5000/api/reports/driver/clear'; 
+const API_BASE = 'http://localhost:5000/api';
 const DRIVER_LOGIN_URL = 'driver-auth.html';
 
-let driverData = null; 
-let assignedReports = []; 
-let currentReportToClear = null; 
-
-
-// =================================================================
-// 2. INITIALIZATION & AUTHENTICATION
-// =================================================================
+// Global State
+let driverData = {
+    user: null,
+    truck: null
+};
 
 $(document).ready(function() {
-    // Event Listeners
+    // 1. Initial Auth & Data Load
+    checkAuthAndInit();
+    
+    // 2. Inject Missing Profile Modal (Dynamic UI)
+    injectProfileModal();
+
+    // 3. Core Event Listeners
     $('#logoutBtn').on('click', handleLogout);
     $('#refreshReportsBtn').on('click', fetchAssignedReports);
-    $('#closeClearanceModalBtn').on('click', closeClearanceModal);
-    $('#clearanceForm').on('submit', handleClearanceSubmission);
+    $('#truckRegForm').on('submit', handleTruckRegistration);
     
-    checkAuthAndInit();
+    // 4. Modal Handlers
+    $('#openProfileModalBtn').on('click', openProfileModal);
+    $('#closeClearanceModalBtn').on('click', () => $('#clearanceModal').addClass('hidden'));
+    
+    // Close modals on backdrop click
+    $(document).on('click', '.modal-backdrop', function(e) {
+        if (e.target === this) $(this).addClass('hidden');
+    });
+
+    // 5. Sidebar Toggles
+    $('#mobileMenuBtn').on('click', () => {
+        $('#sidebar').removeClass('-translate-x-full');
+        $('#sidebarOverlay').removeClass('hidden');
+    });
+    $('#closeSidebarBtn, #sidebarOverlay').on('click', () => {
+        $('#sidebar').addClass('-translate-x-full');
+        $('#sidebarOverlay').addClass('hidden');
+    });
+
+    // 6. Task Action Delegation
+    $(document).on('click', '.confirm-pickup-btn', function() {
+        const id = $(this).data('id');
+        handleStatusUpdate(id, 'In Progress', 'Pickup confirmed! Proceed to disposal site.');
+    });
+
+    $(document).on('click', '.open-clearance-btn', function() {
+        const id = $(this).data('id');
+        $('#clearanceReportId').text(id.slice(-6));
+        $('#clearanceModal').removeClass('hidden').data('report-id', id);
+    });
+
+    $('#clearanceForm').on('submit', handleClearanceSubmit);
 });
 
-function getToken() {
-    return localStorage.getItem('driverToken');
+/**
+ * AUTHENTICATION & INITIALIZATION
+ */
+async function checkAuthAndInit() {
+    const token = localStorage.getItem('driverToken');
+    if (!token) return handleLogout();
+
+    try {
+        const response = await fetch(`${API_BASE}/drivers/auth/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.status === 401) return handleLogout();
+        const result = await response.json();
+
+        if (result.success) {
+            driverData.user = result.data.user;
+            driverData.truck = result.data.truck;
+            syncUIState();
+        } else {
+            // If profile fetch fails but token exists, force logout to prevent UI glitches
+            handleLogout(); 
+        }
+    } catch (err) {
+        console.error("Init Error:", err);
+        showStatusMessage("Connection lost. Retrying...", "error");
+    }
 }
 
-function getAuthHeaders(contentType = 'application/json') {
-    const token = getToken();
-    const headers = {};
-    
-    // NOTE: Do not set Content-Type for FormData (file upload) submissions
-    if (contentType) {
-        headers['Content-Type'] = contentType;
+/**
+ * UI SYNCHRONIZATION
+ * Maps backend data to frontend elements securely
+ */
+function syncUIState() {
+    // 1. User Info
+    $('#driverName').text(driverData.user.username);
+    $('#driverEmail').text(driverData.user.email);
+
+    // 2. Hide all sections initially
+    $('#truckRegistrationSection, #pendingApprovalSection, #operationsSection, #unitStats').addClass('hidden');
+
+    // 3. Determine State
+    if (!driverData.truck) {
+        // STATE: New Driver (No Truck)
+        $('#truckRegistrationSection').removeClass('hidden');
+        $('#truckStatusBadge').text('No Unit Registered').addClass('badge-pending').removeClass('badge-approved');
+    } 
+    else {
+        // Fix: Handle both field names to prevent "Undefined"
+        const plate = driverData.truck.license_plate || driverData.truck.plate_number || 'N/A';
+        
+        // Update Stats Header
+        $('#unitStats').removeClass('hidden');
+        $('#unitPlate').text(plate);
+        $('#unitCapacity').text(`${driverData.truck.capacity_tons} T`);
+
+        if (!driverData.truck.is_approved) {
+            // STATE: Pending Verification
+            $('#pendingApprovalSection').removeClass('hidden');
+            $('#truckStatusBadge').text('Verification Pending').addClass('badge-pending').removeClass('badge-approved');
+        } else {
+            // STATE: Active Operations
+            $('#operationsSection').removeClass('hidden');
+            $('#truckStatusBadge').text('Active Unit').addClass('badge-approved').removeClass('badge-pending');
+            fetchAssignedReports();
+        }
     }
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return headers;
 }
 
-function checkAuthAndInit() {
-    const token = getToken();
+/**
+ * TRUCK REGISTRATION
+ */
+async function handleTruckRegistration(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('driverToken');
+    const $btn = $(this).find('button[type="submit"]');
 
-    if (!token) {
-        window.location.href = DRIVER_LOGIN_URL;
-        return;
+    // Validate inputs
+    const plate = $('#regPlate').val().trim().toUpperCase();
+    const caps = parseFloat($('#regCapacity').val());
+
+    if (!plate || !caps) return showStatusMessage("Please fill all vehicle details", "error");
+
+    $btn.prop('disabled', true).text('PROCESSING...');
+
+    try {
+        const res = await fetch(`${API_BASE}/trucks`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ plate_number: plate, capacity_tons: caps })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showStatusMessage("Registration successful! Awaiting admin verification.", "success");
+            checkAuthAndInit(); // Refresh state immediately
+        } else {
+            throw new Error(data.error || "Registration failed");
+        }
+    } catch (err) {
+        showStatusMessage(err.message, "error");
+    } finally {
+        $btn.prop('disabled', false).text('Submit Unit for Verification');
     }
-    
-    fetchDriverProfile();
 }
 
+/**
+ * TASK MANAGEMENT (Assigned Reports)
+ */
+async function fetchAssignedReports() {
+    const token = localStorage.getItem('driverToken');
+    try {
+        const res = await fetch(`${API_BASE}/reports/driver/assigned`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        const container = $('#assignedReportsList');
+        container.empty();
+
+        if (!result.data || result.data.length === 0) {
+            $('#noReportsMessage').removeClass('hidden');
+            return;
+        }
+
+        $('#noReportsMessage').addClass('hidden');
+        
+        result.data.forEach(report => {
+            const isProgress = report.status === 'In Progress';
+            
+            // Logic: If 'In Progress', show Clear button. If 'Assigned/Pending', show Confirm button.
+            const actionBtn = isProgress 
+                ? `<button data-id="${report._id}" class="open-clearance-btn w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-green-100 transition-all">
+                     <i class="fas fa-check-circle mr-2"></i> Report Disposal
+                   </button>` 
+                : `<button data-id="${report._id}" class="confirm-pickup-btn w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-100 transition-all">
+                     <i class="fas fa-truck-loading mr-2"></i> Confirm Pickup
+                   </button>`;
+
+            container.append(`
+                <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-6">
+                        <span class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-wider">${report.status}</span>
+                        <span class="text-[10px] font-bold text-slate-300">#${report._id.slice(-6)}</span>
+                    </div>
+                    
+                    <h4 class="font-black text-slate-900 text-xl leading-tight mb-2">${report.location.lga_city}</h4>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-6">${report.location.state_area}</p>
+                    
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-2">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</p>
+                        <p class="text-xs font-medium text-slate-600 leading-relaxed">
+                            ${report.description || 'No specific instructions provided.'}
+                        </p>
+                    </div>
+                    ${actionBtn}
+                </div>
+            `);
+        });
+    } catch (e) { console.error("Fetch Error:", e); }
+}
+
+async function handleStatusUpdate(reportId, newStatus, successMsg) {
+    const token = localStorage.getItem('driverToken');
+    try {
+        const res = await fetch(`${API_BASE}/reports/${reportId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+            showStatusMessage(successMsg, "success");
+            fetchAssignedReports(); // Refresh list to update button state
+        }
+    } catch (err) { showStatusMessage("Status update failed", "error"); }
+}
+
+/**
+ * WASTE CLEARANCE (Syncs with Admin)
+ */
+async function handleClearanceSubmit(e) {
+    e.preventDefault();
+    const reportId = $('#clearanceModal').data('report-id');
+    const token = localStorage.getItem('driverToken');
+    const notes = $(this).find('textarea').val();
+
+    if (!notes.trim()) return showStatusMessage("Please provide disposal notes", "error");
+
+    const $btn = $('#submitClearanceBtn');
+    $btn.prop('disabled', true).text('Verifying...');
+
+    try {
+        const res = await fetch(`${API_BASE}/reports/${reportId}/clear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ clearance_notes: notes })
+        });
+
+        if (res.ok) {
+            showStatusMessage("Waste cleared & Unit status updated!", "success");
+            $('#clearanceModal').addClass('hidden');
+            $('#clearanceForm')[0].reset();
+            fetchAssignedReports(); // Refresh to remove the cleared item
+        } else {
+            showStatusMessage("Failed to submit clearance", "error");
+        }
+    } catch (err) { 
+        showStatusMessage("Server error during clearance", "error");
+    } finally {
+        $btn.prop('disabled', false).text('Submit Verification');
+    }
+}
+
+/**
+ * UNIT PROFILE MODAL (Dynamic Injection)
+ * Adds the functionality missing from the HTML file
+ */
+function injectProfileModal() {
+    const modalHTML = `
+    <div id="profileModal" class="modal-backdrop hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-black text-slate-900">Unit Profile</h3>
+                <button onclick="$('#profileModal').addClass('hidden')" class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="bg-indigo-50 p-6 rounded-[2rem] text-center border-2 border-indigo-100">
+                    <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl mx-auto mb-4 shadow-lg shadow-indigo-200">
+                        <i class="fas fa-truck-monster"></i>
+                    </div>
+                    <h4 id="profilePlate" class="text-3xl font-black text-indigo-900 tracking-tight mb-1">---</h4>
+                    <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest">Registered Plate ID</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100 text-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Capacity</p>
+                        <p id="profileCapacity" class="text-xl font-black text-slate-800">---</p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100 text-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status</p>
+                        <p id="profileStatus" class="text-sm font-black uppercase text-slate-800">---</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Assigned Operator</p>
+                     <p id="profileDriver" class="font-bold text-slate-800">---</p>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    $('body').append(modalHTML);
+}
+
+function openProfileModal() {
+    if (!driverData.truck) return showStatusMessage("No vehicle registered yet", "error");
+    
+    // Normalize fields
+    const plate = driverData.truck.license_plate || driverData.truck.plate_number || 'N/A';
+    
+    // Populate Data
+    $('#profilePlate').text(plate);
+    $('#profileCapacity').text(`${driverData.truck.capacity_tons} Tons`);
+    $('#profileDriver').text(driverData.user.username);
+    
+    const statusText = driverData.truck.is_approved ? 'Active / Verified' : 'Pending Approval';
+    const statusColor = driverData.truck.is_approved ? 'text-green-600' : 'text-amber-600';
+    $('#profileStatus').text(statusText).removeClass('text-green-600 text-amber-600').addClass(statusColor);
+
+    $('#profileModal').removeClass('hidden');
+}
+
+/**
+ * HELPER FUNCTIONS
+ */
 function handleLogout() {
     localStorage.removeItem('driverToken');
-    localStorage.removeItem('driverUserData');
     window.location.href = DRIVER_LOGIN_URL;
 }
 
-// =================================================================
-// 3. PROFILE & TRUCK FETCHING/RENDERING
-// =================================================================
-
-async function fetchDriverProfile() {
-    showStatusMessage('Loading Fleet Operator profile...', 'info');
-    try {
-        const response = await fetch(API_AUTH_URL + '/profile', {
-            method: 'GET',
-            headers: getAuthHeaders(null),
-        });
-        
-        if (response.status === 401 || response.status === 403) {
-            handleLogout();
-            return;
-        }
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            driverData = result.data;
-            renderProfile(driverData.user, driverData.truck);
-            fetchAssignedReports(); 
-            
-        } else {
-            showStatusMessage(result.error || 'Failed to load profile.', 'error');
-            renderReports([]); // Clear reports on profile load failure
-        }
-    } catch (err) {
-        console.error("Profile Fetch Error:", err);
-        showStatusMessage('❌ Network error fetching profile.', 'error');
-    } 
-}
-
-function renderProfile(user, truck) {
-    $('#driverName').text(user.username);
-    $('#driverEmail').text(user.email);
-    
-    const $statusContainer = $('#truckStatusContainer');
-    const $statusBadge = $('#truckStatusBadge');
-    
-    let plate = 'N/A';
-    let capacity = 'N/A';
-    let assignedStatus = 'No';
-    
-    $statusContainer.removeClass().addClass('p-4 rounded-lg mb-4 border-l-4');
-    $statusBadge.removeClass();
-
-    if (truck) {
-        plate = truck.license_plate;
-        capacity = truck.capacity_tons;
-        assignedStatus = truck.is_assigned ? 'Yes' : 'No';
-
-        if (truck.is_approved === true) {
-            $statusBadge.addClass('badge-approved').text('APPROVED / ACTIVE');
-            $statusContainer.addClass('border-l-green-600 bg-green-50');
-            $('#truckFormMessage').html('<p class="text-green-700">✅ Profile Approved. You are active for task assignment.</p>');
-        } else if (truck.is_approved === false) {
-            $statusBadge.addClass('badge-pending').text('PENDING REVIEW');
-            $statusContainer.addClass('border-l-amber-600 bg-amber-50');
-            $('#truckFormMessage').html('<p class="text-yellow-700">⏳ Profile Pending Review. You cannot be assigned reports yet.</p>');
-        } else {
-            $statusBadge.addClass('badge-rejected').text('REJECTED');
-            $statusContainer.addClass('border-l-red-600 bg-red-50');
-            $('#truckFormMessage').html('<p class="text-red-700">❌ Profile Rejected. Please contact the Portal Manager for details.</p>');
-        }
-    } else {
-        $statusBadge.addClass('bg-gray-200 text-gray-700').text('INCOMPLETE');
-        $statusContainer.addClass('border-l-gray-400 bg-gray-50');
-        $('#truckFormMessage').html('<p class="text-red-700">⚠️ Fleet Unit data is missing or incomplete. Contact support.</p>');
-    }
-
-    $('#unitPlate').text(plate);
-    $('#unitCapacity').text(capacity);
-    $('#isAssignedStatus').text(assignedStatus);
-}
-
-// =================================================================
-// 4. REPORTS FETCHING AND RENDERING
-// =================================================================
-
-async function fetchAssignedReports() {
-    $('#loadingMessage').removeClass('hidden');
-    $('#noReportsMessage').addClass('hidden');
-    $('#assignedReportsList').find('.report-card').remove(); 
-    
-    // Prevent fetch if truck is not approved
-    if (!driverData || !driverData.truck || driverData.truck.is_approved !== true) {
-        $('#loadingMessage').addClass('hidden');
-        $('#noReportsMessage').text('Your Fleet Unit must be approved by the Portal Manager before reports can be assigned and fetched.');
-        $('#noReportsMessage').removeClass('hidden');
-        $('#taskCount').text('0');
-        return;
-    }
-
-    try {
-        const response = await fetch(API_ASSIGNED_REPORTS_URL, {
-            headers: getAuthHeaders(null)
-        });
-        
-        if (response.status === 401 || response.status === 403) {
-            handleLogout(); 
-            return;
-        }
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            assignedReports = result.data.sort((a, b) => new Date(b.date_reported) - new Date(a.date_reported));
-            renderReports(assignedReports);
-        } else {
-             throw new Error(result.error || 'Failed to fetch assigned reports.');
-        }
-        
-    } catch (err) {
-        console.error('Fetch Assigned Reports Error:', err);
-        showStatusMessage(`Fetch Reports Error: ${err.message}`, 'error');
-        $('#noReportsMessage').text('Error fetching reports. Check server connection.');
-        $('#noReportsMessage').removeClass('hidden');
-    } finally {
-        $('#loadingMessage').addClass('hidden');
-    }
-}
-
-function renderReports(reports) {
-    const $container = $('#assignedReportsList');
-    $container.empty();
-    
-    const activeReports = reports.filter(r => r.status === 'Assigned' || r.status === 'In Progress');
-    const clearedReports = reports.filter(r => r.status === 'Cleared');
-    
-    $('#taskCount').text(activeReports.length);
-    $('#clearanceCount').text(clearedReports.length);
-    
-    if (reports.length === 0) {
-        $('#noReportsMessage').removeClass('hidden').text('You have no active or completed waste reports in your history.');
-        return;
-    }
-    
-    reports.forEach(report => {
-        $container.append(createReportCardHTML(report));
-    });
-
-    $('.complete-task-btn').off('click').on('click', function() {
-        const reportId = $(this).data('id');
-        currentReportToClear = assignedReports.find(r => r._id === reportId);
-        openClearanceModal();
-    });
-}
-
-function createReportCardHTML(report) {
-    const { border, bg, text } = getStatusClass(report.status);
-    
-    const driverStatus = report.status === 'Assigned' ? 'NEW ASSIGNMENT' : report.status.toUpperCase();
-    const canClear = report.status === 'Assigned' || report.status === 'In Progress';
-
-    return `
-        <div class="report-card p-4 rounded-lg shadow-md ${bg} ${border} border-l-4">
-            <div class="flex items-start justify-between">
-                <p class="text-xs font-semibold uppercase ${text} mb-2">${driverStatus}</p>
-                ${canClear ? `
-                    <button class="complete-task-btn bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-3 rounded-lg transition" data-id="${report._id}">
-                        Mark as Cleared
-                    </button>
-                ` : `
-                    <span class="text-xs text-gray-500 font-semibold">CLEARED ${formatDate(report.proof_of_clearance?.date_cleared)}</span>
-                `}
-            </div>
-            
-            <p class="text-sm font-mono text-gray-500 truncate">Record ID: ${report._id.substring(0, 8)}...</p>
-
-            <div class="space-y-1 mt-2 text-sm text-gray-700">
-                <p><i class="fas fa-map-marker-alt text-red-500 w-4 mr-2"></i> Location: <span class="font-semibold">${report.location.location_name}</span></p>
-                <p><i class="fas fa-route text-blue-500 w-4 mr-2"></i> Area: ${report.location.lga_city}, ${report.location.state_area}</p>
-                <p><i class="fas fa-clock text-gray-500 w-4 mr-2"></i> Assigned: ${formatDate(report.date_assigned)}</p>
-                <p class="mt-2 text-xs text-gray-500">Details: ${report.description.substring(0, 100)}...</p>
-            </div>
-        </div>
-    `;
-}
-
-// =================================================================
-// 5. CLEARANCE MODAL LOGIC
-// =================================================================
-
-function openClearanceModal() {
-    if (!currentReportToClear) return;
-
-    $('#clearanceReportId').text(currentReportToClear._id.substring(0, 8) + '...');
-    $('#clearanceLocation').text(currentReportToClear.location.location_name);
-    
-    $('#clearance-image').val('');
-    $('#clearance-notes').val('');
-    $('#clearanceMessage').addClass('hidden').empty();
-
-    $('#clearanceModal').removeClass('hidden');
-}
-
-function closeClearanceModal() {
-    $('#clearanceModal').addClass('hidden');
-    currentReportToClear = null;
-}
-
-async function handleClearanceSubmission(e) {
-    e.preventDefault();
-    if (!currentReportToClear) return;
-    
-    const $form = $(this);
-    const $submitBtn = $('#submitClearanceBtn');
-    
-    // File validation check
-    if ($('#clearance-image')[0].files.length === 0) {
-        showStatusMessage('Please upload a Proof of Clearance Image.', 'error');
-        return;
-    }
-    
-    setButtonLoading($submitBtn, true, 'Uploading Proof...');
-
-    // Use FormData for file upload
-    const formData = new FormData($form[0]);
-    formData.append('reportId', currentReportToClear._id);
-
-    try {
-        const response = await fetch(API_CLEARANCE_URL, {
-            method: 'POST',
-            // CRITICAL: Do NOT set Content-Type for file uploads with FormData
-            headers: { 'Authorization': `Bearer ${getToken()}` }, 
-            body: formData,
-        });
-
-        if (response.status === 401 || response.status === 403) {
-            handleLogout();
-            return;
-        }
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Clearance submission failed due to an unknown error.');
-        }
-
-        showStatusMessage('Task successfully marked as CLEARED! Fleet Unit is now marked Available.', 'success');
-        closeClearanceModal();
-        await fetchDriverProfile(); // Re-fetch profile and reports to refresh the status/list
-        
-    } catch (err) {
-        console.error('Clearance Error:', err);
-        showStatusMessage(`Submission Error: ${err.message}`, 'error');
-    } finally {
-        setButtonLoading($submitBtn, false, 'Submit Clearance Proof');
-    }
-}
-
-
-// =================================================================
-// 6. UTILITIES
-// =================================================================
-
-function getStatusClass(status) {
-    switch (status) {
-        case 'New':
-            return { border: 'border-l-indigo-600', bg: 'bg-indigo-50', text: 'text-indigo-700' };
-        case 'Assigned':
-            return { border: 'border-l-blue-600', bg: 'bg-blue-50', text: 'text-blue-700' };
-        case 'In Progress':
-        case 'In-Progress': 
-            return { border: 'border-l-amber-600', bg: 'bg-amber-50', text: 'text-amber-700' };
-        case 'Cleared':
-            return { border: 'border-l-green-600', bg: 'bg-green-50', text: 'text-green-700' };
-        default:
-            return { border: 'border-l-gray-300', bg: 'bg-gray-100', text: 'text-gray-700' };
-    }
-}
-
-function setButtonLoading($btn, isLoading, loadingText = 'Processing...') {
-    const originalText = $btn.data('original-text') || $btn.text();
-    $btn.data('original-text', originalText);
-    
-    $btn.prop('disabled', isLoading);
-    if (isLoading) {
-        $btn.text(loadingText);
-    } else {
-        $btn.text(originalText);
-    }
-}
-
 function showStatusMessage(text, type) {
-    const messageDiv = $('#statusMessage');
-    messageDiv.removeClass().addClass('fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl font-medium');
-    
-    if (type === 'success') {
-        messageDiv.addClass('bg-green-100 text-green-700').html(`✅ ${text}`).show();
-    } else if (type === 'error') {
-        messageDiv.addClass('bg-red-100 text-red-700').html(`❌ ${text}`).show();
-    } else { // info
-        messageDiv.addClass('bg-blue-100 text-blue-700').html(`ℹ️ ${text}`).show();
-    }
-    setTimeout(() => {
-        $('#statusMessage').fadeOut('slow');
-    }, 5000);
-}
-
-function formatDate(dateString, includeTime = false) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    if (includeTime) {
-        options.hour = '2-digit';
-        options.minute = '2-digit';
-        options.hour12 = true;
-    }
-    return date.toLocaleDateString('en-US', options);
+    const msg = $('#statusMessage');
+    msg.text(text)
+       .removeClass('hidden opacity-0 bg-red-500 bg-green-500')
+       .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
+       .fadeIn();
+    setTimeout(() => msg.fadeOut(), 3000);
 }

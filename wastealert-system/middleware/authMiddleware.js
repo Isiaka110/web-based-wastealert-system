@@ -2,19 +2,17 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Truck = require('../models/Truck'); // Needed for protectDriver
+const Truck = require('../models/Truck');
 
 // =================================================================
 // 1. ADMIN PROTECTION MIDDLEWARE (protect)
 // =================================================================
-
 /**
  * Ensures the user is authenticated and has the role of 'admin' or 'superadmin'.
- * This is the function that enforces the 'admin' role, regardless of the frontend name.
+ * Used for Admin Dashboard stats, user approvals, and fleet management.
  */
 const protect = async (req, res, next) => {
     let token;
-    // CRITICAL: Use fallback secret if not in .env (for dev environment)
     const JWT_SECRET = process.env.JWT_SECRET || 'your_fallback_jwt_secret'; 
 
     if (
@@ -23,90 +21,85 @@ const protect = async (req, res, next) => {
     ) {
         try {
             token = req.headers.authorization.split(' ')[1];
+            
+            // Safety check for empty or "undefined" strings from localStorage
+            if (!token || token === 'undefined' || token === 'null') {
+                return res.status(401).json({ success: false, error: 'Authentication token is missing or invalid.' });
+            }
+
             const decoded = jwt.verify(token, JWT_SECRET);
             
             // Fetch user and exclude the password field
             const user = await User.findById(decoded.id).select('-password');
 
             if (!user) {
-                return res.status(401).json({ success: false, error: 'Not authorized, user not found' });
+                return res.status(401).json({ success: false, error: 'User no longer exists.' });
             }
 
-            // CRITICAL ROLE CHECK: Use the database role string ('admin'/'superadmin')
+            // Role Check: Restrict to Admins
             if (user.role !== 'admin' && user.role !== 'superadmin') {
-                return res.status(403).json({ success: false, error: 'Not authorized: Access restricted to Platform Managers (Admins).' });
+                return res.status(403).json({ success: false, error: 'Access restricted to Platform Managers.' });
             }
 
             req.user = user;
             next();
 
         } catch (error) {
-            console.error("JWT Verification Error:", error.message);
-            // This catches expired tokens or invalid signatures, leading to the "Unauthorized" error
-            res.status(401).json({ success: false, error: 'Not authorized, session expired or token failed.' });
+            console.error("Admin Auth Error:", error.message);
+            res.status(401).json({ success: false, error: 'Session expired or invalid token.' });
         }
-    }
-
-    if (!token) {
-        res.status(401).json({ success: false, error: 'Not authorized, no token provided.' });
+    } else {
+        res.status(401).json({ success: false, error: 'No authorization token provided.' });
     }
 };
 
 // =================================================================
 // 2. DRIVER PROTECTION MIDDLEWARE (protectDriver)
 // =================================================================
-
 /**
  * Ensures the user is authenticated and has the role of 'driver'.
- * It also attaches the driver's associated Truck ID (Fleet Unit ID) to the request.
+ * Attaches req.user and req.truck to allow the dashboard to switch between 
+ * Registration, Pending, and Active UI states.
  */
 const protectDriver = async (req, res, next) => {
     let token;
     const JWT_SECRET = process.env.JWT_SECRET || 'your_fallback_jwt_secret'; 
 
     if (
-        req.headers.authorization &&
+        req.headers.authorization && 
         req.headers.authorization.startsWith('Bearer')
     ) {
         try {
             token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, JWT_SECRET);
             
+            if (!token || token === 'undefined' || token === 'null') {
+                return res.status(401).json({ success: false, error: 'Driver token missing' });
+            }
+
+            const decoded = jwt.verify(token, JWT_SECRET);
             const user = await User.findById(decoded.id).select('-password');
 
-            if (!user) {
-                return res.status(401).json({ success: false, error: 'Not authorized, driver user not found' });
+            // Ensure the user exists and is actually a driver
+            if (!user || user.role !== 'driver') {
+                return res.status(401).json({ success: false, error: 'Unauthorized: Driver account required.' });
             }
             
-            // Check for 'driver' role
-            if (user.role !== 'driver') {
-                return res.status(403).json({ success: false, error: 'Access restricted to Fleet Operators.' });
-            }
-            
-            // Find the associated truck (Fleet Unit)
+            // Fetch associated truck for the dashboard's checkAuthAndInit() logic
             const truck = await Truck.findOne({ driver_id: user._id });
-
-            if (!truck) {
-                return res.status(403).json({ success: false, error: 'No associated Fleet Unit found for this Operator.' });
-            }
             
-            // Attach driver and truck to the request
-            req.driver = user;
-            req.driver.truck = truck._id; // Store the truck ID for easy access in routes
+            // Attach data to request for maximum compatibility with controller logic
+            req.user = user; 
+            req.truck = truck; 
             
             next();
-
         } catch (error) {
-            console.error("Driver JWT Verification Error:", error.message);
-            res.status(401).json({ success: false, error: 'Not authorized, session expired or token failed.' });
+            console.error("Driver Auth Error:", error.message);
+            res.status(401).json({ success: false, error: 'Not authorized' });
         }
-    }
-
-    if (!token) {
-        res.status(401).json({ success: false, error: 'Not authorized, no token provided.' });
+    } else {
+        res.status(401).json({ success: false, error: 'No authorization header found.' });
     }
 };
-
 
 module.exports = {
     protect,
