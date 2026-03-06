@@ -9,7 +9,7 @@ Follow these steps to set up and run the WasteAlert system on your local machine
 ### 1. Prerequisites
 Ensure you have the following installed and set up:
 - **Node.js**: [Download and Install Node.js](https://nodejs.org/) (LTS version recommended).
-- **MongoDB**: A running MongoDB instance. You can use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for a free cloud database or install MongoDB locally.
+- **MongoDB**: A running MongoDB instance. You can use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for a free cloud database.
 - **Cloudinary**: A free account at [Cloudinary](https://cloudinary.com/) for image storage (used for waste incident reports).
 
 ### 2. Installation
@@ -37,38 +37,66 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
 > **Note:** Replace the placeholders with your actual MongoDB URI and Cloudinary credentials.
 
-### 4. Database Setup
-- If using **MongoDB Atlas**, whitelist your IP address and copy the connection string into the `MONGO_URI` field in your `.env` file.
-- If using **Local MongoDB**, your URI will typically be `mongodb://localhost:27017/wastealert`.
+### 4. Running the Application Locally (Development)
+This project is powered by **Vite** for blazing fast frontend bundling and **Express.js** for the backend API.
 
-### 5. Running the Application
-Start the backend server using the following command:
+To start the Vite frontend development server:
+```bash
+npm run dev
+```
+
+In a separate terminal, to start the Express backend server:
 ```bash
 npm start
 ```
-The server will initialize and connect to your database. You should see a message: `🚀 Server running on port 5000`.
 
-### 6. Accessing the System
-Once the server is running, you can access the different portals through your web browser:
+### 5. Accessing the System
+Once your local servers are running, access the portals through your browser (usually via Vite's port, e.g., `http://localhost:5173` or similar displayed in your terminal).
 
-- **Main Entry Portal**: [http://localhost:5000/public/index.html](http://localhost:5000/public/index.html)
-- **Report an Incident**: [http://localhost:5000/public/report.html](http://localhost:5000/public/report.html)
-- **Driver Portal**: [http://localhost:5000/public/driver-auth.html](http://localhost:5000/public/driver-auth.html)
-- **Admin Panel**: [http://localhost:5000/public/admin-login.html](http://localhost:5000/public/admin-login.html)
+- **Main Entry Portal**: `index.html`
+- **Report an Incident**: `report.html`
+- **Driver Portal**: `driver-auth.html`
+- **Admin Panel**: `admin-login.html`
+
+---
+
+## 🌍 Vercel Deployment Workflow (Production)
+
+This repository has been fully modularized and rigorously optimized to deploy automatically on **Vercel** with zero-configuration needed! It utilizes robust Serverless Functions for the Backend and Vite for constructing static distributions.
+
+### **Deployment Steps:**
+1. **Push your code to Git**: Commit and push your codebase to an online repository such as GitHub, GitLab, or Bitbucket.
+2. **Import to Vercel**: 
+   - Sign up or log into [Vercel](https://vercel.com).
+   - Click **Add New...** > **Project** and import your freshly pushed repository.
+3. **Configure Settings**: 
+   - Vercel will automatically detect `Vite` for the frontend build structure (`npm run build`).
+   - Open the **Environment Variables** section and meticulously paste all properties from your local `.env` file (`MONGO_URI`, `JWT_SECRET`, Cloudinary configurations, etc.).
+4. **Deploy**:
+   - Click the **Deploy** button.
+   - Vercel will trigger the Vite bundler to securely compile your `public/` directory into a `dist/` folder via the `vercel.json` instructions.
+   - Simultaneously, Vercel will seamlessly convert `api/index.js` into scalable, Serverless Lambda Functions for your backend API endpoints.
+
+**Congratulations!** 🚀 Within a minute or two, your full-stack application will be live on a distinct Vercel domain ready for prime-time.
 
 ---
 
 ## 📂 Project Structure
 - **/public**: Contains the frontend HTML, CSS, and client-side JavaScript.
+- **/api**: Serverless entry point strictly configured for Vercel lambdas.
+- **/dist**: Generated production build folder compiled securely by Vite.
 - **/routes**: API endpoints for authentication, reports, trucks, and user management.
 - **/models**: Mongoose schemas for MongoDB (User, Report, Truck).
 - **/middleware**: Security and authentication logic (JWT verification).
-- **/config**: Configuration files for external services like Cloudinary.
-- **server.js**: Entry point for the Node.js/Express application.
+- **/config**: Configuration files for Database pooling schemas and Cloudinary.
+- **server.js**: Base Express server initialization structure.
+- **vercel.json**: Configuration matrix defining serverless rewrites and dist outputs.
+- **vite.config.js**: Vite ecosystem bundler properties explicitly targeting multiple HTML entry points.
 
 ## 🛠️ Technology Stack
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB (Mongoose)
-- **Authentication**: JSON Web Tokens (JWT), Bcrypt
-- **File Storage**: Cloudinary (via Multer)
-- **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript
+- **Backend Architecture**: Node.js, Express.js (Serverless Ready)
+- **Database**: MongoDB (Mongoose Pooling Enabled)
+- **Authentication Framework**: JSON Web Tokens (JWT), Bcrypt Auth Hashing
+- **File Storage Management**: Cloudinary (via Multer Buffer Arrays)
+- **Frontend Architecture**: HTML5, Tailwind CSS, Vanilla JavaScript Module Federation
+- **Bundler Compiler**: Vite Build Automation
