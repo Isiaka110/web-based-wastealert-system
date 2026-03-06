@@ -3,7 +3,7 @@
  * Aligned with "Web-Enabled Environmental Waste Information Management System"
  */
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 const DRIVER_LOGIN_URL = 'driver-auth.html';
 
 // Global State
@@ -12,10 +12,10 @@ let driverData = {
     truck: null
 };
 
-$(document).ready(function() {
+$(document).ready(function () {
     // 1. Initial Auth & Data Load
     checkAuthAndInit();
-    
+
     // 2. Inject Missing Profile Modal (Dynamic UI)
     injectProfileModal();
 
@@ -23,13 +23,13 @@ $(document).ready(function() {
     $('#logoutBtn').on('click', handleLogout);
     $('#refreshReportsBtn').on('click', fetchAssignedReports);
     $('#truckRegForm').on('submit', handleTruckRegistration);
-    
+
     // 4. Modal Handlers
     $('#openProfileModalBtn').on('click', openProfileModal);
     $('#closeClearanceModalBtn').on('click', () => $('#clearanceModal').addClass('hidden'));
-    
+
     // Close modals on backdrop click
-    $(document).on('click', '.modal-backdrop', function(e) {
+    $(document).on('click', '.modal-backdrop', function (e) {
         if (e.target === this) $(this).addClass('hidden');
     });
 
@@ -44,12 +44,12 @@ $(document).ready(function() {
     });
 
     // 6. Task Action Delegation
-    $(document).on('click', '.confirm-pickup-btn', function() {
+    $(document).on('click', '.confirm-pickup-btn', function () {
         const id = $(this).data('id');
         handleStatusUpdate(id, 'In Progress', 'Pickup confirmed! Proceed to disposal site.');
     });
 
-    $(document).on('click', '.open-clearance-btn', function() {
+    $(document).on('click', '.open-clearance-btn', function () {
         const id = $(this).data('id');
         $('#clearanceReportId').text(id.slice(-6));
         $('#clearanceModal').removeClass('hidden').data('report-id', id);
@@ -79,7 +79,7 @@ async function checkAuthAndInit() {
             syncUIState();
         } else {
             // If profile fetch fails but token exists, force logout to prevent UI glitches
-            handleLogout(); 
+            handleLogout();
         }
     } catch (err) {
         console.error("Init Error:", err);
@@ -104,11 +104,11 @@ function syncUIState() {
         // STATE: New Driver (No Truck)
         $('#truckRegistrationSection').removeClass('hidden');
         $('#truckStatusBadge').text('No Unit Registered').addClass('badge-pending').removeClass('badge-approved');
-    } 
+    }
     else {
         // Fix: Handle both field names to prevent "Undefined"
         const plate = driverData.truck.license_plate || driverData.truck.plate_number || 'N/A';
-        
+
         // Update Stats Header
         $('#unitStats').removeClass('hidden');
         $('#unitPlate').text(plate);
@@ -146,7 +146,7 @@ async function handleTruckRegistration(e) {
     try {
         const res = await fetch(`${API_BASE}/trucks`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
@@ -187,15 +187,15 @@ async function fetchAssignedReports() {
         }
 
         $('#noReportsMessage').addClass('hidden');
-        
+
         result.data.forEach(report => {
             const isProgress = report.status === 'In Progress';
-            
+
             // Logic: If 'In Progress', show Clear button. If 'Assigned/Pending', show Confirm button.
-            const actionBtn = isProgress 
+            const actionBtn = isProgress
                 ? `<button data-id="${report._id}" class="open-clearance-btn w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-green-100 transition-all">
                      <i class="fas fa-check-circle mr-2"></i> Report Disposal
-                   </button>` 
+                   </button>`
                 : `<button data-id="${report._id}" class="confirm-pickup-btn w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-100 transition-all">
                      <i class="fas fa-truck-loading mr-2"></i> Confirm Pickup
                    </button>`;
@@ -267,7 +267,7 @@ async function handleClearanceSubmit(e) {
         } else {
             showStatusMessage("Failed to submit clearance", "error");
         }
-    } catch (err) { 
+    } catch (err) {
         showStatusMessage("Server error during clearance", "error");
     } finally {
         $btn.prop('disabled', false).text('Submit Verification');
@@ -322,15 +322,15 @@ function injectProfileModal() {
 
 function openProfileModal() {
     if (!driverData.truck) return showStatusMessage("No vehicle registered yet", "error");
-    
+
     // Normalize fields
     const plate = driverData.truck.license_plate || driverData.truck.plate_number || 'N/A';
-    
+
     // Populate Data
     $('#profilePlate').text(plate);
     $('#profileCapacity').text(`${driverData.truck.capacity_tons} Tons`);
     $('#profileDriver').text(driverData.user.username);
-    
+
     const statusText = driverData.truck.is_approved ? 'Active / Verified' : 'Pending Approval';
     const statusColor = driverData.truck.is_approved ? 'text-green-600' : 'text-amber-600';
     $('#profileStatus').text(statusText).removeClass('text-green-600 text-amber-600').addClass(statusColor);
@@ -349,8 +349,8 @@ function handleLogout() {
 function showStatusMessage(text, type) {
     const msg = $('#statusMessage');
     msg.text(text)
-       .removeClass('hidden opacity-0 bg-red-500 bg-green-500')
-       .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
-       .fadeIn();
+        .removeClass('hidden opacity-0 bg-red-500 bg-green-500')
+        .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
+        .fadeIn();
     setTimeout(() => msg.fadeOut(), 3000);
 }

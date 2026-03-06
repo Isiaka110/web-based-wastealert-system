@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -45,10 +46,9 @@
 
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-6">
 
-    <div
-        id="statusMessage"
-        class="hidden fixed top-6 right-6 z-50 p-4 rounded-2xl shadow-2xl text-white font-bold text-sm min-w-[300px]"
-    ></div>
+    <div id="statusMessage"
+        class="hidden fixed top-6 right-6 z-50 p-4 rounded-2xl shadow-2xl text-white font-bold text-sm min-w-[300px]">
+    </div>
 
     <div class="w-full max-w-md">
         <div class="text-center mb-10">
@@ -75,33 +75,20 @@
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
                             Email Address
                         </label>
-                        <input
-                            type="email"
-                            id="loginEmail"
-                            placeholder="operator@emiwip.com"
-                            required
-                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all"
-                        />
+                        <input type="email" id="loginEmail" placeholder="operator@emiwip.com" required
+                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all" />
                     </div>
 
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
                             Security Password
                         </label>
-                        <input
-                            type="password"
-                            id="loginPassword"
-                            placeholder="••••••••"
-                            required
-                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all"
-                        />
+                        <input type="password" id="loginPassword" placeholder="••••••••" required
+                            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 outline-none font-bold transition-all" />
                     </div>
 
-                    <button
-                        type="submit"
-                        id="loginBtn"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs tracking-widest transition-all active:scale-95"
-                    >
+                    <button type="submit" id="loginBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs tracking-widest transition-all active:scale-95">
                         Sign In to Fleet
                     </button>
                 </form>
@@ -127,78 +114,52 @@
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                             Full Name
                         </label>
-                        <input
-                            type="text"
-                            id="registerUsername"
-                            required
-                            placeholder="Enter full name"
-                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
-                        />
+                        <input type="text" id="registerUsername" required placeholder="Enter full name"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all" />
                     </div>
 
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                             Email Address
                         </label>
-                        <input
-                            type="email"
-                            id="registerEmail"
-                            required
-                            placeholder="driver@example.com"
-                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
-                        />
+                        <input type="email" id="registerEmail" required placeholder="driver@example.com"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all" />
                     </div>
 
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                             Account Password
                         </label>
-                        <input
-                            type="password"
-                            id="registerPassword"
-                            required
-                            placeholder="Create password"
-                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
-                        />
+                        <input type="password" id="registerPassword" required placeholder="Create password"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all" />
                     </div>
 
                     <div class="pt-4 border-t border-slate-100">
-                        <p class="text-[9px] font-black text-indigo-600 uppercase mb-3 tracking-[0.2em]">Vehicle Specifications</p>
-                        
+                        <p class="text-[9px] font-black text-indigo-600 uppercase mb-3 tracking-[0.2em]">Vehicle
+                            Specifications</p>
+
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                                <label
+                                    class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                     License Plate
                                 </label>
-                                <input
-                                    type="text"
-                                    id="registerLicensePlate"
-                                    placeholder="ABC-1234"
-                                    required
-                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
-                                />
+                                <input type="text" id="registerLicensePlate" placeholder="ABC-1234" required
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all" />
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                                <label
+                                    class="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">
                                     Capacity (Tons)
                                 </label>
-                                <input
-                                    type="number"
-                                    id="registerCapacityTons"
-                                    placeholder="5.0"
-                                    step="0.1"
-                                    required
-                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all"
-                                />
+                                <input type="number" id="registerCapacityTons" placeholder="5.0" step="0.1" required
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:border-indigo-600 outline-none transition-all" />
                             </div>
                         </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        id="registerBtn"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs mt-4 transition-all active:scale-95"
-                    >
+                    <button type="submit" id="registerBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl uppercase text-xs mt-4 transition-all active:scale-95">
                         Submit Registration
                     </button>
                 </form>
@@ -214,6 +175,7 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="./js/driver-auth.js"></script>
+    <script type="module" src="./js/driver-auth.js"></script>
 </body>
+
 </html>

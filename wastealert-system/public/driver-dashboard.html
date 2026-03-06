@@ -1,61 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fleet Operator Dashboard | EMIWIP</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              indigo: { 900: '#1e1b4b', 800: '#312e81', 600: '#4f46e5' },
-              slate: { 900: '#0f172a', 800: '#1e293b' }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: { 900: '#1e1b4b', 800: '#312e81', 600: '#4f46e5' },
+                        slate: { 900: '#0f172a', 800: '#1e293b' }
+                    }
+                }
             }
-          }
         }
-      }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .modal-backdrop { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; }
-        .badge-pending { background-color: #fef3c7; color: #92400e; }
-        .badge-approved { background-color: #dcfce7; color: #166534; }
-        .sidebar-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modal-backdrop {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: inline-block;
+        }
+
+        .badge-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-approved {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .sidebar-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 10px;
+        }
     </style>
 </head>
+
 <body class="bg-slate-50 text-slate-900 overflow-x-hidden">
 
-    <div id="statusMessage" class="hidden fixed top-6 right-6 z-[100] p-5 min-w-[320px] rounded-2xl shadow-2xl font-black text-white transform transition-all"></div>
+    <div id="statusMessage"
+        class="hidden fixed top-6 right-6 z-[100] p-5 min-w-[320px] rounded-2xl shadow-2xl font-black text-white transform transition-all">
+    </div>
 
     <div id="sidebarOverlay" class="hidden fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm"></div>
 
     <div class="flex min-h-screen">
-        <aside id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 w-72 bg-indigo-900 text-white z-50 shadow-2xl transform -translate-x-full lg:translate-x-0">
+        <aside id="sidebar"
+            class="sidebar-transition fixed lg:static inset-y-0 left-0 w-72 bg-indigo-900 text-white z-50 shadow-2xl transform -translate-x-full lg:translate-x-0">
             <div class="p-8 border-b border-indigo-800 flex justify-between items-center">
                 <div>
                     <h1 class="text-2xl font-black tracking-tighter uppercase leading-none">Emiwip</h1>
                     <p class="text-[9px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Operator Portal</p>
                 </div>
-                <button id="closeSidebarBtn" class="lg:hidden text-indigo-400 p-2"><i class="fas fa-times text-xl"></i></button>
+                <button id="closeSidebarBtn" class="lg:hidden text-indigo-400 p-2"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
-            
+
             <nav class="mt-10 px-6 space-y-3">
-                <button id="navTasks" class="w-full flex items-center px-5 py-4 bg-indigo-800 rounded-2xl font-bold text-white border-l-4 border-indigo-400 shadow-lg">
+                <button id="navTasks"
+                    class="w-full flex items-center px-5 py-4 bg-indigo-800 rounded-2xl font-bold text-white border-l-4 border-indigo-400 shadow-lg">
                     <i class="fas fa-tasks mr-4"></i> Field Tasks
                 </button>
-                <button id="openProfileModalBtn" class="w-full flex items-center px-5 py-4 text-indigo-300 hover:bg-indigo-800/50 rounded-2xl font-bold transition-all">
+                <button id="openProfileModalBtn"
+                    class="w-full flex items-center px-5 py-4 text-indigo-300 hover:bg-indigo-800/50 rounded-2xl font-bold transition-all">
                     <i class="fas fa-truck-moving mr-4"></i> Unit Profile
                 </button>
                 <div class="pt-10 border-t border-indigo-800/50">
-                    <button id="logoutBtn" class="w-full flex items-center px-5 py-4 text-red-300 hover:bg-red-900/20 rounded-2xl font-bold transition-all">
+                    <button id="logoutBtn"
+                        class="w-full flex items-center px-5 py-4 text-red-300 hover:bg-red-900/20 rounded-2xl font-bold transition-all">
                         <i class="fas fa-power-off mr-4"></i> Logout
                     </button>
                 </div>
@@ -63,41 +106,54 @@
         </aside>
 
         <main class="flex-1 min-w-0 bg-slate-50">
-            <header class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 p-6 lg:px-12 flex justify-between items-center">
+            <header
+                class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 p-6 lg:px-12 flex justify-between items-center">
                 <div class="flex items-center gap-4">
-                    <button id="mobileMenuBtn" class="lg:hidden p-3 bg-white rounded-xl shadow-sm border text-slate-600 active:scale-95 transition-transform">
+                    <button id="mobileMenuBtn"
+                        class="lg:hidden p-3 bg-white rounded-xl shadow-sm border text-slate-600 active:scale-95 transition-transform">
                         <i class="fas fa-bars"></i>
                     </button>
                     <div>
                         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Field Operations</h2>
-                        <p class="hidden sm:block text-slate-400 text-xs font-bold uppercase tracking-widest">Waste Collection & Clearance</p>
+                        <p class="hidden sm:block text-slate-400 text-xs font-bold uppercase tracking-widest">Waste
+                            Collection & Clearance</p>
                     </div>
                 </div>
-                <button id="refreshReportsBtn" class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-100 transition-all">
+                <button id="refreshReportsBtn"
+                    class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-100 transition-all">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </header>
 
             <div class="p-6 lg:p-12 max-w-6xl mx-auto space-y-8">
                 <section>
-                    <div class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div
+                        class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
                         <div class="flex items-center gap-6 w-full md:w-auto">
-                            <div class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-xl">
+                            <div
+                                class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-xl">
                                 <i class="fas fa-user-circle"></i>
                             </div>
                             <div>
                                 <div id="truckStatusBadge" class="status-badge mb-2">Syncing Profile...</div>
-                                <h3 id="driverName" class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">---</h3>
+                                <h3 id="driverName"
+                                    class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">---
+                                </h3>
                                 <p id="driverEmail" class="text-sm text-slate-400 font-medium mt-1">---</p>
                             </div>
                         </div>
-                        <div id="unitStats" class="hidden grid grid-cols-2 gap-4 w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
-                            <div class="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 text-center min-w-[120px]">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Plate Number</p>
+                        <div id="unitStats"
+                            class="hidden grid grid-cols-2 gap-4 w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
+                            <div
+                                class="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 text-center min-w-[120px]">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Plate
+                                    Number</p>
                                 <p id="unitPlate" class="font-black text-slate-800 text-lg">---</p>
                             </div>
-                            <div class="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 text-center min-w-[120px]">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Cap. (Tons)</p>
+                            <div
+                                class="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 text-center min-w-[120px]">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Cap.
+                                    (Tons)</p>
                                 <p id="unitCapacity" class="font-black text-slate-800 text-lg">---</p>
                             </div>
                         </div>
@@ -107,19 +163,27 @@
                 <section id="truckRegistrationSection" class="hidden">
                     <div class="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-indigo-50">
                         <h3 class="text-3xl font-black text-slate-900 mb-2">Enroll Your Environmental Unit</h3>
-                        <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">Register your truck to start receiving waste collection tasks.</p>
+                        <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">Register your truck
+                            to start receiving waste collection tasks.</p>
                         <form id="truckRegForm" class="space-y-6">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">License Plate Number</label>
-                                    <input type="text" id="regPlate" required placeholder="E.G. LAG-452-QR" class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all">
+                                    <label
+                                        class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">License
+                                        Plate Number</label>
+                                    <input type="text" id="regPlate" required placeholder="E.G. LAG-452-QR"
+                                        class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all">
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">Load Capacity (Tons)</label>
-                                    <input type="number" step="0.1" id="regCapacity" required placeholder="E.G. 5.5" class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all">
+                                    <label
+                                        class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">Load
+                                        Capacity (Tons)</label>
+                                    <input type="number" step="0.1" id="regCapacity" required placeholder="E.G. 5.5"
+                                        class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all">
                                 </div>
                             </div>
-                            <button type="submit" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">
+                            <button type="submit"
+                                class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">
                                 Submit Unit for Verification
                             </button>
                         </form>
@@ -127,13 +191,17 @@
                 </section>
 
                 <section id="pendingApprovalSection" class="hidden">
-                    <div class="col-span-full py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-indigo-100">
+                    <div
+                        class="col-span-full py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-indigo-100">
                         <div class="bg-amber-50 inline-block p-8 rounded-full mb-6">
                             <i class="fas fa-shield-halved text-amber-500 text-4xl"></i>
                         </div>
-                        <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Unit Verification Pending</h3>
-                        <p class="text-slate-400 text-xs mt-3 px-12 max-w-xl mx-auto leading-relaxed uppercase font-bold">
-                            Your vehicle details have been submitted. Please wait for an administrator to approve your unit before you can access field tasks.
+                        <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Unit Verification Pending
+                        </h3>
+                        <p
+                            class="text-slate-400 text-xs mt-3 px-12 max-w-xl mx-auto leading-relaxed uppercase font-bold">
+                            Your vehicle details have been submitted. Please wait for an administrator to approve your
+                            unit before you can access field tasks.
                         </p>
                     </div>
                 </section>
@@ -141,14 +209,18 @@
                 <section id="operationsSection" class="hidden space-y-8">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Assigned Tasks</h3>
-                        <span class="px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase">Live Updates</span>
+                        <span
+                            class="px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase">Live
+                            Updates</span>
                     </div>
-                    
-                    <div id="assignedReportsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        </div>
 
-                    <div id="noReportsMessage" class="hidden py-16 text-center bg-white rounded-[2.5rem] border border-slate-100">
-                        <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">Currently no waste collection tasks assigned</p>
+                    <div id="assignedReportsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    </div>
+
+                    <div id="noReportsMessage"
+                        class="hidden py-16 text-center bg-white rounded-[2.5rem] border border-slate-100">
+                        <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">Currently no waste
+                            collection tasks assigned</p>
                     </div>
                 </section>
             </div>
@@ -158,22 +230,31 @@
     <div id="clearanceModal" class="modal-backdrop hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl">
             <h3 class="text-3xl font-black text-slate-900 mb-2">Final Clearance</h3>
-            <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">Confirm disposal for task #<span id="clearanceReportId">---</span></p>
-            
+            <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">Confirm disposal for task #<span
+                    id="clearanceReportId">---</span></p>
+
             <form id="clearanceForm" class="space-y-6">
                 <div>
-                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3 px-1">Disposal Notes</label>
-                    <textarea name="clearance_notes" rows="3" required placeholder="Describe the disposal site status..." class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all"></textarea>
+                    <label
+                        class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3 px-1">Disposal
+                        Notes</label>
+                    <textarea name="clearance_notes" rows="3" required
+                        placeholder="Describe the disposal site status..."
+                        class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-indigo-500 transition-all"></textarea>
                 </div>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" id="closeClearanceModalBtn" class="flex-1 py-4 font-black text-[10px] uppercase text-slate-400">Cancel</button>
-                    <button type="submit" id="submitClearanceBtn" class="flex-1 bg-green-600 py-4 rounded-2xl font-black text-[10px] uppercase text-white shadow-xl shadow-green-100 active:scale-95 transition-all">Submit Verification</button>
+                    <button type="button" id="closeClearanceModalBtn"
+                        class="flex-1 py-4 font-black text-[10px] uppercase text-slate-400">Cancel</button>
+                    <button type="submit" id="submitClearanceBtn"
+                        class="flex-1 bg-green-600 py-4 rounded-2xl font-black text-[10px] uppercase text-white shadow-xl shadow-green-100 active:scale-95 transition-all">Submit
+                        Verification</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="./js/driver-dashboard.js"></script>
+    <script type="module" src="./js/driver-dashboard.js"></script>
 </body>
+
 </html>

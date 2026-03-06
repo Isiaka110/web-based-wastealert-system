@@ -3,7 +3,7 @@
  * Handles Report Management, Fleet Assignment, and Details Viewing
  */
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 const ADMIN_TOKEN = 'adminToken';
 
 // Global State
@@ -13,39 +13,39 @@ let pendingDrivers = [];
 let currentReportIdToAssign = null;
 let currentTab = 'pending'; // Options: 'pending', 'active', 'cleared'
 
-$(document).ready(function() {
+$(document).ready(function () {
     // 1. Security Check
     checkAuth();
 
     // 2. Initial Data Sync
     fetchAllData();
-    
+
     // 3. Inject Missing Details Modal (Dynamic UI creation)
     injectDetailsModal();
 
     // 4. Navigation Events (Mobile & Desktop)
     $('#mobileMenuBtn').on('click', () => $('#sidebar').removeClass('-translate-x-full'));
     $('#closeSidebarBtn').on('click', () => $('#sidebar').addClass('-translate-x-full'));
-    
+
     $('#navDashboard').on('click', () => switchPage('Dashboard'));
     $('#navFleet').on('click', () => switchPage('Fleet'));
 
     // 5. Tab Logic
-    $('.tab-btn').on('click', function() {
+    $('.tab-btn').on('click', function () {
         const tab = $(this).data('tab');
-        
+
         // UI Update
         $('.tab-btn').removeClass('text-indigo-600 border-b-4 border-indigo-600 font-black')
-                     .addClass('text-gray-400 font-bold');
+            .addClass('text-gray-400 font-bold');
         $(this).addClass('text-indigo-600 border-b-4 border-indigo-600 font-black')
-               .removeClass('text-gray-400 font-bold');
-        
+            .removeClass('text-gray-400 font-bold');
+
         currentTab = tab;
         renderReports();
     });
 
     // 6. Refresh Button
-    $('#refreshDataBtn').on('click', function() {
+    $('#refreshDataBtn').on('click', function () {
         const icon = $(this).find('i');
         icon.addClass('fa-spin');
         fetchAllData().finally(() => setTimeout(() => icon.removeClass('fa-spin'), 800));
@@ -53,9 +53,9 @@ $(document).ready(function() {
 
     // 7. Modal Handlers
     $('#assignmentForm').on('submit', handleAssignmentSubmit);
-    
+
     // Universal Modal Close
-    $(document).on('click', '.close-modal, .modal-backdrop', function(e) {
+    $(document).on('click', '.close-modal, .modal-backdrop', function (e) {
         if (e.target === this || $(e.target).hasClass('close-modal')) {
             $('.modal-backdrop').addClass('hidden');
         }
@@ -162,7 +162,7 @@ function getStatusColor(status) {
 /**
  * --- VIEW DETAILS LOGIC (Missing Functionality Added) ---
  */
-window.viewReportDetails = function(id) {
+window.viewReportDetails = function (id) {
     const report = reportsData.find(r => r._id === id);
     if (!report) return;
 
@@ -172,7 +172,7 @@ window.viewReportDetails = function(id) {
     $('#modalPhone').text(report.reporter_phone);
     $('#modalLoc').text(`${report.location.location_name}, ${report.location.lga_city}`);
     $('#modalStatus').text(report.status);
-    
+
     // Show Modal
     $('#detailsModal').removeClass('hidden');
 };
@@ -180,14 +180,14 @@ window.viewReportDetails = function(id) {
 /**
  * --- ASSIGNMENT LOGIC ---
  */
-window.openAssignModal = function(id) {
+window.openAssignModal = function (id) {
     currentReportIdToAssign = id;
     const select = $('#truckSelect');
     select.empty().append('<option value="">Select a verified unit...</option>');
-    
+
     // Filter: Only Approved Trucks that are NOT assigned (Available)
     const available = allTrucks.filter(t => t.is_approved && !t.is_assigned);
-    
+
     if (available.length === 0) {
         select.append('<option disabled>No active units available</option>');
     } else {
@@ -241,7 +241,7 @@ async function handleAssignmentSubmit(e) {
         // Targeted PUT request to update report status and assign truck
         const res = await fetch(`${API_BASE}/reports/${currentReportIdToAssign}/assign`, {
             method: 'PUT',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
@@ -254,14 +254,14 @@ async function handleAssignmentSubmit(e) {
         if (res.ok && result.success) {
             // 5. Success Logic & State Cleanup
             showStatusMessage("Fleet unit deployed! Task moved to 'Active'.", "success");
-            
+
             // Hide modal and reset local state variables
             $('#assignmentModal').addClass('hidden');
             $('#assignmentForm')[0].reset();
-            currentReportIdToAssign = null; 
-            
+            currentReportIdToAssign = null;
+
             // Trigger a full re-sync to update Dashboard counts and Fleet tables
-            fetchAllData(); 
+            fetchAllData();
         } else {
             // 6. Application-Level Error Handling
             // Handles cases like the truck being assigned by another admin simultaneously
@@ -285,7 +285,7 @@ function renderApprovalTables() {
     // 1. Drivers
     const driverBody = $('#driverApprovalTable');
     driverBody.empty();
-    
+
     if (pendingDrivers.length === 0) {
         driverBody.append('<tr><td colspan="3" class="p-8 text-center text-slate-300 text-xs font-bold uppercase">No pending requests</td></tr>');
     } else {
@@ -309,22 +309,22 @@ function renderApprovalTables() {
     allTrucks.forEach(t => {
         const plate = t.license_plate || t.plate_number || 'N/A';
         const driverName = t.driver_id ? t.driver_id.username : (t.driver_name || 'Unlinked');
-        
+
         fleetBody.append(`
             <tr class="hover:bg-slate-50 transition-colors">
                 <td class="p-6 font-bold text-slate-700">${plate}</td>
                 <td class="p-6 text-slate-500 text-sm font-medium">${driverName}</td>
                 <td class="p-6">
-                    ${t.is_approved 
-                        ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Active</span>`
-                        : `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Pending</span>`
-                    }
+                    ${t.is_approved
+                ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Active</span>`
+                : `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Pending</span>`
+            }
                 </td>
                 <td class="p-6 text-right">
-                    ${!t.is_approved 
-                        ? `<button onclick="approveTruck('${t._id}')" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-black">Verify</button>`
-                        : `<span class="text-slate-300 text-[10px] font-bold uppercase">Verified</span>`
-                    }
+                    ${!t.is_approved
+                ? `<button onclick="approveTruck('${t._id}')" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-black">Verify</button>`
+                : `<span class="text-slate-300 text-[10px] font-bold uppercase">Verified</span>`
+            }
                 </td>
             </tr>
         `);
@@ -365,14 +365,14 @@ function switchPage(page) {
         $('#viewFleet').removeClass('hidden');
     }
     // Close mobile menu
-    if(window.innerWidth < 1024) $('#sidebar').addClass('-translate-x-full');
+    if (window.innerWidth < 1024) $('#sidebar').addClass('-translate-x-full');
 }
 
 function checkAuth() {
     if (!localStorage.getItem(ADMIN_TOKEN)) window.location.href = 'admin-auth.html';
 }
 
-window.handleLogout = function() {
+window.handleLogout = function () {
     localStorage.removeItem(ADMIN_TOKEN);
     window.location.href = 'admin-login.html';
 }
@@ -380,9 +380,9 @@ window.handleLogout = function() {
 function showStatusMessage(text, type) {
     const msg = $('#statusMessage');
     msg.text(text)
-       .removeClass('hidden bg-red-500 bg-green-500 opacity-0')
-       .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
-       .fadeIn();
+        .removeClass('hidden bg-red-500 bg-green-500 opacity-0')
+        .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
+        .fadeIn();
     setTimeout(() => msg.fadeOut(), 3000);
 }
 
@@ -431,6 +431,6 @@ function injectDetailsModal() {
             </div>
         </div>
     </div>`;
-    
+
     $('body').append(modalHTML);
 }

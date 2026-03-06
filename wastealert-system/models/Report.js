@@ -15,17 +15,17 @@ const ReportSchema = new mongoose.Schema({
   },
   location: {
     // Corrected to location_name to match app.js and reportRoutes.js
-    location_name: { 
+    location_name: {
       type: String,
       required: [true, 'A specific location name/landmark is required.'],
     },
-    state_area: { 
-        type: String,
-        required: [true, 'The State/Area is required.'],
+    state_area: {
+      type: String,
+      required: [true, 'The State/Area is required.'],
     },
-    lga_city: { 
-        type: String,
-        required: [true, 'The Local Government Area/City is required.'],
+    lga_city: {
+      type: String,
+      required: [true, 'The Local Government Area/City is required.'],
     }
     // coordinates field and 2dsphere index have been removed
   },
@@ -35,7 +35,7 @@ const ReportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Assigned', 'In-Progress', 'Cleared'], 
+    enum: ['Pending', 'Assigned', 'In Progress', 'Cleared'],
     default: 'Pending',
   },
   assigned_to: {

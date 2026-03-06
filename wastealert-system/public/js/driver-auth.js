@@ -1,6 +1,6 @@
 // public/js/driver-auth.js
 
-const API_URL = 'http://localhost:5000/api/drivers/auth';
+const API_URL = '/api/drivers/auth';
 const DASHBOARD_URL = 'driver-dashboard.html';
 
 $(document).ready(function () {
@@ -50,19 +50,19 @@ async function handleLogin(e) {
         });
 
         let data;
-try {
-    data = await res.json();
-} catch {
-    data = {};
-}
+        try {
+            data = await res.json();
+        } catch {
+            data = {};
+        }
 
-if (!res.ok) {
-    console.error('REGISTER 400 RESPONSE:', data);
-    throw new Error(
-        data.error ||
-        `Registration failed (HTTP ${res.status}). Check server logs.`
-    );
-}
+        if (!res.ok) {
+            console.error('REGISTER 400 RESPONSE:', data);
+            throw new Error(
+                data.error ||
+                `Registration failed (HTTP ${res.status}). Check server logs.`
+            );
+        }
 
 
         if (!data.token) {
@@ -142,17 +142,17 @@ function setLoading(btn, state, text) {
             : 'Register Account';
 
     btn.prop('disabled', state)
-       .text(state ? text : defaultText);
+        .text(state ? text : defaultText);
 }
 
 function showStatus(message, type) {
     const msg = $('#statusMessage');
 
     msg.stop(true, true)
-       .removeClass('hidden bg-red-500 bg-green-500')
-       .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
-       .text(message)
-       .fadeIn(200);
+        .removeClass('hidden bg-red-500 bg-green-500')
+        .addClass(type === 'error' ? 'bg-red-500' : 'bg-green-500')
+        .text(message)
+        .fadeIn(200);
 
     setTimeout(() => msg.fadeOut(400), 4000);
 }

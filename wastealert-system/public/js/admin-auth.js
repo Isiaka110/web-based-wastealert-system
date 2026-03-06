@@ -1,12 +1,12 @@
 // public/js/admin-auth.js
 
 // IMPORTANT: Match your Node.js server URL
-const LOGIN_API_URL = 'http://localhost:5000/api/auth/login'; 
+const LOGIN_API_URL = '/api/auth/login';
 
 // Function to handle the form submission
-$('#adminLoginForm').on('submit', async function(e) {
+$('#adminLoginForm').on('submit', async function (e) {
     e.preventDefault();
-    
+
     // Disable button and change text while processing
     $('#loginBtn').prop('disabled', true).text('Authenticating...');
 
@@ -29,12 +29,12 @@ $('#adminLoginForm').on('submit', async function(e) {
 
         if (response.ok) {
             // SUCCESS!
-            
+
             // 1. Store the JWT Token securely in the browser's localStorage
             localStorage.setItem('adminToken', data.token);
-            
+
             showMessage('Login Successful! Redirecting...', 'success');
-            
+
             // 2. Redirect the admin to the main Dashboard page (Next Step)
             // We assume the dashboard page will be named 'admin-dashboard.html'
             setTimeout(() => {
@@ -59,7 +59,7 @@ $('#adminLoginForm').on('submit', async function(e) {
 function showMessage(text, type) {
     const messageDiv = $('#message');
     messageDiv.removeClass().addClass('p-3 mb-4 rounded-lg text-center font-medium');
-    
+
     if (type === 'success') {
         messageDiv.addClass('bg-green-100 text-green-700').html(`✅ ${text}`).show();
     } else if (type === 'error') {

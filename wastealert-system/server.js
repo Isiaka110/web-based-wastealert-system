@@ -8,20 +8,18 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // 1. Middleware setup
-app.use(cors()); 
+app.use(cors());
 app.use(express.json()); // Essential for parsing JSON from frontend fetch calls
 
 // 2. Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected successfully!'))
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1); // Exit if DB connection fails
-  });
+const connectDB = require('./config/db');
+if (process.env.NODE_ENV !== 'production') {
+  connectDB(); // Start immediately for dev/test environments.
+}
 
 // 3. API Health Check (Use this to verify server is alive)
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'OK', message: 'WasteAlert Server is running' });
+  res.status(200).json({ status: 'OK', message: 'WasteAlert Server is running' });
 });
 
 // 4. Route Handlers
@@ -32,40 +30,36 @@ const truckRoutes = require('./routes/truckRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 
 // 5. Mounting the Routers
-app.use('/api/auth', authRoutes); 
-app.use('/api/drivers/auth', driverAuthRoutes); 
+app.use('/api/auth', authRoutes);
+app.use('/api/drivers/auth', driverAuthRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/trucks', truckRoutes);
 app.use('/api/reports', reportRoutes);
 
-// server.js
-app.use('/api/trucks', require('./routes/truckRoutes'));
-app.use('/api/reports', require('./routes/reportRoutes'));
-app.use('/api/drivers/auth', require('./routes/driverAuthRoutes'));
+// 6. Serve static files cleanly
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 6. Missing Function: 404 Catch-All
-// This helps debug why routes like /profile might be failing
+// 7. 404 Catch-All Handler
 app.use((req, res) => {
-    console.warn(`404 Alert: ${req.method} request to ${req.originalUrl} failed.`);
-    res.status(404).json({ 
-        error: 'Route Not Found', 
-        message: `The path ${req.originalUrl} does not exist on this server.` 
-    });
+  res.status(404).json({
+    error: 'Route Not Found',
+    message: `The path ${req.originalUrl} does not exist on this server.`
+  });
 });
 
-// 7. Missing Function: Global Error Handler
-// Prevents the server from crashing when an error occurs in a route
+// 8. Global Error Handler
 app.use((err, req, res, next) => {
-    console.error('SERVER ERROR:', err.stack);
-    res.status(500).json({ 
-        error: 'Internal Server Error', 
-        message: err.message 
-    });
+  console.error('SERVER ERROR:', err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message
+  });
 });
-// Only do this if you WANT "public" in your URL
-app.use('/public', express.static(path.join(__dirname, 'public')));
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Endpoints active at http://localhost:${PORT}/api`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Endpoints active at http://localhost:${PORT}/api`);
-});
+module.exports = app;
