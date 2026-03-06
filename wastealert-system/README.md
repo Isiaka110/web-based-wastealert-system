@@ -50,7 +50,21 @@ In a separate terminal, to start the Express backend server:
 npm start
 ```
 
-### 5. Accessing the System
+### 5. First-Time Admin Setup
+Before you can access the Management Console, you will need a central administrator account to authorize drivers and deploy cleanup units. We've included a script to securely create your first SuperAdmin on the database.
+
+Run the following command in your terminal while your `.env` file is properly configured:
+```bash
+node createAdmin.js
+```
+
+This will automatically inject the following initial credentials:
+- **Email:** `admin@wastealert.com`
+- **Password:** `admin123`
+
+*(Note: Ensure you change this password once logged in, or disable this script in production!)*
+
+### 6. Accessing the System
 Once your local servers are running, access the portals through your browser (usually via Vite's port, e.g., `http://localhost:5173` or similar displayed in your terminal).
 
 - **Main Entry Portal**: `index.html`
