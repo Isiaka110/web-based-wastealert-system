@@ -4,7 +4,8 @@ const API_URL = '/api/drivers/auth';
 const DASHBOARD_URL = 'driver-dashboard.html';
 
 $(document).ready(function () {
-    if (localStorage.getItem('driverToken')) {
+    const token = localStorage.getItem('driverToken');
+    if (token && token !== 'undefined' && token !== 'null') {
         window.location.href = DASHBOARD_URL;
         return;
     }
@@ -57,10 +58,10 @@ async function handleLogin(e) {
         }
 
         if (!res.ok) {
-            console.error('REGISTER 400 RESPONSE:', data);
+            console.error('LOGIN ERROR:', data);
             throw new Error(
                 data.error ||
-                `Registration failed (HTTP ${res.status}). Check server logs.`
+                `Login failed (HTTP ${res.status}). Check server status.`
             );
         }
 

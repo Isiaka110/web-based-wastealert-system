@@ -63,27 +63,32 @@ $(document).ready(function () {
  */
 async function checkAuthAndInit() {
     const token = localStorage.getItem('driverToken');
-    if (!token) return handleLogout();
+    if (!token || token === 'undefined' || token === 'null') {
+        return handleLogout();
+    }
 
     try {
         const response = await fetch(`${API_BASE}/drivers/auth/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.status === 401) return handleLogout();
+        if (response.status === 401 || response.status === 403) {
+            return handleLogout();
+        }
+
         const result = await response.json();
 
-        if (result.success) {
+        if (result.success && result.data && result.data.user) {
             driverData.user = result.data.user;
             driverData.truck = result.data.truck;
             syncUIState();
         } else {
-            // If profile fetch fails but token exists, force logout to prevent UI glitches
             handleLogout();
         }
     } catch (err) {
         console.error("Init Error:", err);
-        showStatusMessage("Connection lost. Retrying...", "error");
+        showStatusMessage("Session error. Please log in again.", "error");
+        setTimeout(handleLogout, 2000);
     }
 }
 
@@ -92,9 +97,11 @@ async function checkAuthAndInit() {
  * Maps backend data to frontend elements securely
  */
 function syncUIState() {
+    if (!driverData.user) return handleLogout();
+
     // 1. User Info
-    $('#driverName').text(driverData.user.username);
-    $('#driverEmail').text(driverData.user.email);
+    $('#driverName').text(driverData.user.username || 'Operator');
+    $('#driverEmail').text(driverData.user.email || '');
 
     // 2. Hide all sections initially
     $('#truckRegistrationSection, #pendingApprovalSection, #operationsSection, #unitStats').addClass('hidden');
@@ -281,7 +288,7 @@ async function handleClearanceSubmit(e) {
 function injectProfileModal() {
     const modalHTML = `
     <div id="profileModal" class="modal-backdrop hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+        <div class="bg-white rounded-[2.5rem] p-6 md:p-10 w-full max-w-md shadow-2xl relative">
             <div class="flex justify-between items-center mb-8">
                 <h3 class="text-2xl font-black text-slate-900">Unit Profile</h3>
                 <button onclick="$('#profileModal').addClass('hidden')" class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100">

@@ -64,6 +64,15 @@
             background: #4f46e5;
             border-radius: 10px;
         }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </head>
 
@@ -228,7 +237,7 @@
     </div>
 
     <div id="clearanceModal" class="modal-backdrop hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl">
+        <div class="bg-white rounded-[3rem] p-6 md:p-10 w-full max-w-lg shadow-2xl">
             <h3 class="text-3xl font-black text-slate-900 mb-2">Final Clearance</h3>
             <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">Confirm disposal for task #<span
                     id="clearanceReportId">---</span></p>

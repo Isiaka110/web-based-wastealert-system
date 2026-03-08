@@ -2,6 +2,15 @@
 
 // IMPORTANT: Match your Node.js server URL
 const LOGIN_API_URL = '/api/auth/login';
+const DASHBOARD_URL = 'admin-dashboard.html';
+
+// 0. Auto-redirect if already logged in
+$(document).ready(function () {
+    const token = localStorage.getItem('adminToken');
+    if (token && token !== 'undefined' && token !== 'null') {
+        window.location.href = DASHBOARD_URL;
+    }
+});
 
 // Function to handle the form submission
 $('#adminLoginForm').on('submit', async function (e) {

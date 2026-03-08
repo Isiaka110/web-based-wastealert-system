@@ -15,7 +15,7 @@ let currentTab = 'pending'; // Options: 'pending', 'active', 'cleared'
 
 $(document).ready(function () {
     // 1. Security Check
-    checkAuth();
+    if (!checkAuth()) return;
 
     // 2. Initial Data Sync
     fetchAllData();
@@ -24,8 +24,15 @@ $(document).ready(function () {
     injectDetailsModal();
 
     // 4. Navigation Events (Mobile & Desktop)
-    $('#mobileMenuBtn').on('click', () => $('#sidebar').removeClass('-translate-x-full'));
-    $('#closeSidebarBtn').on('click', () => $('#sidebar').addClass('-translate-x-full'));
+    $('#mobileMenuBtn').on('click', () => {
+        $('#sidebar').removeClass('-translate-x-full');
+        $('#sidebarOverlay').removeClass('hidden');
+    });
+
+    $('#closeSidebarBtn, #sidebarOverlay').on('click', () => {
+        $('#sidebar').addClass('-translate-x-full');
+        $('#sidebarOverlay').addClass('hidden');
+    });
 
     $('#navDashboard').on('click', () => switchPage('Dashboard'));
     $('#navFleet').on('click', () => switchPage('Fleet'));
@@ -75,6 +82,11 @@ async function fetchAllData() {
             fetch(`${API_BASE}/trucks`, { headers }),
             fetch(`${API_BASE}/users/drivers/pending`, { headers })
         ]);
+
+        // If any request returns 401, the token is likely invalid/expired
+        if (repRes.status === 401 || truckRes.status === 401 || driverRes.status === 401) {
+            return handleLogout();
+        }
 
         if (repRes.ok) reportsData = (await repRes.json()).data || [];
         if (truckRes.ok) allTrucks = (await truckRes.json()).data || [];
@@ -365,11 +377,19 @@ function switchPage(page) {
         $('#viewFleet').removeClass('hidden');
     }
     // Close mobile menu
-    if (window.innerWidth < 1024) $('#sidebar').addClass('-translate-x-full');
+    if (window.innerWidth < 1024) {
+        $('#sidebar').addClass('-translate-x-full');
+        $('#sidebarOverlay').addClass('hidden');
+    }
 }
 
 function checkAuth() {
-    if (!localStorage.getItem(ADMIN_TOKEN)) window.location.href = 'admin-auth.html';
+    const token = localStorage.getItem(ADMIN_TOKEN);
+    if (!token || token === 'undefined' || token === 'null') {
+        window.location.href = 'admin-login.html';
+        return false;
+    }
+    return true;
 }
 
 window.handleLogout = function () {
@@ -395,7 +415,7 @@ function injectDetailsModal() {
 
     const modalHTML = `
     <div id="detailsModal" class="modal-backdrop hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div class="bg-white rounded-[2.5rem] p-6 md:p-10 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-start mb-6">
                 <div>
                     <span id="modalStatus" class="status-badge bg-indigo-50 text-indigo-600 mb-2 inline-block">Pending</span>
