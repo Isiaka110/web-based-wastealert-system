@@ -93,11 +93,13 @@ async function handleRegister(e) {
     const payload = {
         username: $('#registerUsername').val().trim().toLowerCase(),
         email: $('#registerEmail').val().trim().toLowerCase(),
-        password: $('#registerPassword').val()
+        password: $('#registerPassword').val(),
+        license_plate: $('#registerLicensePlate').val().trim().toUpperCase(),
+        capacity_tons: $('#registerCapacityTons').val()
     };
 
-    if (!payload.username || !payload.email || !payload.password) {
-        return showStatus('All fields are required.', 'error');
+    if (!payload.username || !payload.email || !payload.password || !payload.license_plate || !payload.capacity_tons) {
+        return showStatus('All fields, including vehicle details, are required.', 'error');
     }
 
     if (payload.password.length < 6) {

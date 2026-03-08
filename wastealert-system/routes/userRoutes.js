@@ -9,9 +9,9 @@ const { protect } = require('../middleware/authMiddleware');
  */
 router.get('/drivers/pending', protect, async (req, res) => {
     try {
-        const drivers = await User.find({ 
-            role: 'driver', 
-            is_approved: false 
+        const drivers = await User.find({
+            role: 'driver',
+            is_approved: false
         }).select('-password').sort({ createdAt: -1 });
 
         res.json({ success: true, data: drivers });
@@ -34,14 +34,14 @@ router.get('/', protect, async (req, res) => {
 });
 
 /**
- * @route   PATCH /api/users/approve/:id
- * @desc    Admin action to approve a driver (Fixes the 403 Forbidden on Driver Login)
+ * @route   PATCH /api/users/:id/approve
+ * @desc    Admin action to approve a driver
  */
-router.patch('/approve/:id', protect, async (req, res) => {
+router.patch('/:id/approve', protect, async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(
-            req.params.id, 
-            { is_approved: true }, 
+            req.params.id,
+            { is_approved: true },
             { new: true }
         );
 
@@ -49,10 +49,10 @@ router.patch('/approve/:id', protect, async (req, res) => {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: `Driver ${user.username} is now authorized.`,
-            data: user 
+            data: user
         });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Approval failed' });

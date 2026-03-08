@@ -29,7 +29,8 @@ router.post('/register', async (req, res) => {
             username,
             email,
             password: password,
-            role: 'admin'
+            role: 'admin',
+            is_approved: true // Admins are approved by default
         });
 
         user = await newUser.save();
@@ -54,7 +55,13 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const user = await User.findOne({ username });
+        // Try to find user by username OR email
+        const user = await User.findOne({
+            $or: [
+                { username: username },
+                { email: username }
+            ]
+        });
 
         if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
             return res.status(401).json({ success: false, error: 'Invalid credentials or unauthorized access.' });

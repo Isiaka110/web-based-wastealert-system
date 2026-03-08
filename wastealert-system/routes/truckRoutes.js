@@ -15,9 +15,9 @@ router.post('/', protectDriver, async (req, res) => {
         // Check if driver already has a truck registered
         const existingTruck = await Truck.findOne({ driver_id: req.user._id });
         if (existingTruck) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'A vehicle unit is already associated with this account.' 
+            return res.status(400).json({
+                success: false,
+                error: 'A vehicle unit is already associated with this account.'
             });
         }
 
@@ -47,6 +47,23 @@ router.get('/', protect, async (req, res) => {
         res.json({ success: true, data: trucks });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Server error' });
+    }
+});
+
+/**
+ * @route   PATCH /api/trucks/:id/approve
+ * @desc    Verify a fleet unit for operation
+ */
+router.patch('/:id/approve', protect, async (req, res) => {
+    try {
+        const truck = await Truck.findByIdAndUpdate(
+            req.params.id,
+            { is_approved: true },
+            { new: true }
+        );
+        res.json({ success: true, message: 'Unit verified', data: truck });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Verification failed' });
     }
 });
 
