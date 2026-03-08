@@ -1,7 +1,7 @@
-// routes/truckRoutes.js
 const express = require('express');
 const router = express.Router();
 const Truck = require('../models/Truck');
+const User = require('../models/User');
 const { protect, protectDriver } = require('../middleware/authMiddleware');
 
 /**
@@ -61,7 +61,13 @@ router.patch('/:id/approve', protect, async (req, res) => {
             { is_approved: true },
             { new: true }
         );
-        res.json({ success: true, message: 'Unit verified', data: truck });
+
+        if (truck && truck.driver_id) {
+            // Automatically approve the driver as well when their truck is verified
+            await User.findByIdAndUpdate(truck.driver_id, { is_approved: true });
+        }
+
+        res.json({ success: true, message: 'Unit verified and driver authorized', data: truck });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Verification failed' });
     }

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Truck = require('../models/Truck');
 const { protect } = require('../middleware/authMiddleware');
 
 /**
@@ -49,9 +50,12 @@ router.patch('/:id/approve', protect, async (req, res) => {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
 
+        // Automatically verify the driver's truck as well
+        await Truck.findOneAndUpdate({ driver_id: user._id }, { is_approved: true });
+
         res.json({
             success: true,
-            message: `Driver ${user.username} is now authorized.`,
+            message: `Driver ${user.username} and their vehicle are now authorized.`,
             data: user
         });
     } catch (err) {
