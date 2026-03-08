@@ -1,116 +1,112 @@
-# WasteAlert System
+# 🗑️ WasteAlert: Integrated Waste Management Portal
 
-WasteAlert is an Integrated Waste Information Portal designed to connect citizens, administrative teams, and cleanup drivers for efficient waste incident management.
+WasteAlert is a premium, full-stack environmental management system designed to streamline the reporting, tracking, and clearance of waste incidents. It connects citizens (Reporters), Administrative Managers, and Field Operators (Drivers) into one synchronized ecosystem.
+
+---
+
+## 🛠️ Technology Stack
+
+### **Backend (The Engine)**
+*   **Node.js & Express.js**: High-performance server architecture optimized for serverless deployment.
+*   **MongoDB & Mongoose**: Scalable NoSQL database with strict schema validation and relationship modeling.
+*   **JWT (JSON Web Tokens)**: Secure, stateless authentication for cross-dashboard session management.
+*   **Bcrypt.js**: Industry-standard salted hashing for password security.
+*   **Cloudinary SDK**: Cloud-native image processing and storage for incident proof.
+*   **Multer-Storage-Cloudinary**: Direct stream-to-cloud file handling (buffer-free).
+
+### **Frontend (The Experience)**
+*   **Vite 7.0**: Modern, lightning-fast build tool for bundling modules.
+*   **Tailwind CSS**: Utility-first CSS framework for responsive, high-performance UI components.
+*   **jQuery 3.6**: Efficient DOM manipulation and AJAX handling for real-time dashboard updates.
+*   **FontAwesome 6.0**: Premium iconography for intuitive navigation.
+*   **Google Fonts (Plus Jakarta Sans)**: Modern typography for a premium layout.
+
+---
+
+## 📂 Navigation & User Guide
+
+The platform is divided into three distinct zones based on your role:
+
+### 1. **Public Reporter (No Login Required)**
+**URL**: `/report.html`
+*   **The Goal**: Allow any citizen to report a waste incident.
+*   **Navigation**:
+    1.  Select **State** and **LGA** using the dynamic dropdowns.
+    2.  Write a specific **Landmark Description** (e.g., "Opposite the main market gate").
+    3.  Upload **Photo Proof** (Required).
+    4.  Submit to alert the management team.
+
+### 2. **Administrative Console (Management)**
+**URL**: `/admin-login.html` -> `/admin-dashboard.html`
+*   **The Goal**: Monitor the city, manage the fleet, and deploy resources.
+*   **Navigation**:
+    *   **Overview Tab**: See real-time stats (Pending vs. Active cases).
+    *   **Pending Tasks**: Click "Deploy Unit" to assign a verified truck to a report.
+    *   **Fleet & Drivers Section**: Verify new driver signups and inspect truck specifications.
+*   **Privileges**: Full CRUD on reports, authorization of operators, and system-wide tracking.
+
+### 3. **Fleet Operator Portal (Drivers)**
+**URL**: `/driver-auth.html` -> `/driver-dashboard.html`
+*   **The Goal**: Receive tasks, navigate to locations, and confirm cleanup.
+*   **Navigation**:
+    *   **Operations Tab**: View tasks assigned to you by the Admin.
+    *   **Task Card**: Click "Confirm Pickup" when starting.
+    *   **Clearance**: Click "Report Disposal" once the waste is cleared to reset your truck to "Available."
+*   **Privileges**: Personal profile management, truck registration, and task lifecycle updates.
+
+---
+
+## 🔐 Logins & Privileges
+
+| Role | Access URL | Default Login ID | Default Password | Key Privileges |
+| :--- | :--- | :--- | :--- | :--- |
+| **SuperAdmin** | `/admin-login.html` | `SuperAdmin` | `admin123` | Verify Drivers, Deploy Trucks, View All Reports |
+| **Driver** | `/driver-auth.html` | *(User Registered Email)* | *(User Password)* | View Assigned Tasks, Update Status, Log Clearances |
+| **Reporter** | `/report.html` | Public | N/A | Submit New Reports with Photos |
+
+---
 
 ## 🚀 Getting Started
 
-Follow these steps to set up and run the WasteAlert system on your local machine.
+### 1. Installation
+```bash
+git clone <repo-url>
+cd wastealert-system
+npm install
+```
 
-### 1. Prerequisites
-Ensure you have the following installed and set up:
-- **Node.js**: [Download and Install Node.js](https://nodejs.org/) (LTS version recommended).
-- **MongoDB**: A running MongoDB instance. You can use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for a free cloud database.
-- **Cloudinary**: A free account at [Cloudinary](https://cloudinary.com/) for image storage (used for waste incident reports).
-
-### 2. Installation
-1. Navigate to the project root directory:
-   ```bash
-   cd wastealert-system
-   ```
-2. Install the necessary dependencies:
-   ```bash
-   npm install
-   ```
-
-### 3. Environment Configuration
-Create a `.env` file in the root of the `wastealert-system` folder and add the following configuration keys:
-
+### 2. Setup Environment Variables
+Create a `.env` file in the root:
 ```env
 PORT=5000
-NODE_ENV=development
-JWT_SECRET=your_random_secret_string
-MONGO_URI=your_mongodb_connection_uri
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+MONGO_URI=your_mongodb_atlas_uri
+JWT_SECRET=any_strong_secret_key
+CLOUDINARY_CLOUD_NAME=your_name
+CLOUDINARY_API_KEY=your_key
+CLOUDINARY_API_SECRET=your_secret
 ```
 
-> **Note:** Replace the placeholders with your actual MongoDB URI and Cloudinary credentials.
-
-### 4. Running the Application Locally (Development)
-This project is powered by **Vite** for blazing fast frontend bundling and **Express.js** for the backend API.
-
-To start the Vite frontend development server:
-```bash
-npm run dev
-```
-
-In a separate terminal, to start the Express backend server:
-```bash
-npm start
-```
-
-### 5. First-Time Admin Setup
-Before you can access the Management Console, you will need a central administrator account to authorize drivers and deploy cleanup units. We've included a script to securely create your first SuperAdmin on the database.
-
-Run the following command in your terminal while your `.env` file is properly configured:
+### 3. Initialize the Admin
+Run this once to create your management account:
 ```bash
 node createAdmin.js
 ```
 
-This will automatically inject the following initial credentials:
-- **Email:** `admin@wastealert.com`
-- **Password:** `admin123`
-
-*(Note: Ensure you change this password once logged in, or disable this script in production!)*
-
-### 6. Accessing the System
-Once your local servers are running, access the portals through your browser (usually via Vite's port, e.g., `http://localhost:5173` or similar displayed in your terminal).
-
-- **Main Entry Portal**: `index.html`
-- **Report an Incident**: `report.html`
-- **Driver Portal**: `driver-auth.html`
-- **Admin Panel**: `admin-login.html`
+### 4. Direct Entry (Development)
+To start the full system (Server + Frontend):
+```bash
+npm start
+```
+Go to: **`http://localhost:5000`**
 
 ---
 
-## 🌍 Vercel Deployment Workflow (Production)
+## 🌍 Deployment (Vercel)
 
-This repository has been fully modularized and rigorously optimized to deploy automatically on **Vercel** with zero-configuration needed! It utilizes robust Serverless Functions for the Backend and Vite for constructing static distributions.
-
-### **Deployment Steps:**
-1. **Push your code to Git**: Commit and push your codebase to an online repository such as GitHub, GitLab, or Bitbucket.
-2. **Import to Vercel**: 
-   - Sign up or log into [Vercel](https://vercel.com).
-   - Click **Add New...** > **Project** and import your freshly pushed repository.
-3. **Configure Settings**: 
-   - Vercel will automatically detect `Vite` for the frontend build structure (`npm run build`).
-   - Open the **Environment Variables** section and meticulously paste all properties from your local `.env` file (`MONGO_URI`, `JWT_SECRET`, Cloudinary configurations, etc.).
-4. **Deploy**:
-   - Click the **Deploy** button.
-   - Vercel will trigger the Vite bundler to securely compile your `public/` directory into a `dist/` folder via the `vercel.json` instructions.
-   - Simultaneously, Vercel will seamlessly convert `api/index.js` into scalable, Serverless Lambda Functions for your backend API endpoints.
-
-**Congratulations!** 🚀 Within a minute or two, your full-stack application will be live on a distinct Vercel domain ready for prime-time.
+This project is **Vercel-Optimized**. Simply push to GitHub and import the project. Vercel will:
+1.  Run `npm run build` using the `vite.config.js`.
+2.  Serve the `dist` folder as the frontend.
+3.  Execute `api/index.js` as the backend entry point.
 
 ---
-
-## 📂 Project Structure
-- **/public**: Contains the frontend HTML, CSS, and client-side JavaScript.
-- **/api**: Serverless entry point strictly configured for Vercel lambdas.
-- **/dist**: Generated production build folder compiled securely by Vite.
-- **/routes**: API endpoints for authentication, reports, trucks, and user management.
-- **/models**: Mongoose schemas for MongoDB (User, Report, Truck).
-- **/middleware**: Security and authentication logic (JWT verification).
-- **/config**: Configuration files for Database pooling schemas and Cloudinary.
-- **server.js**: Base Express server initialization structure.
-- **vercel.json**: Configuration matrix defining serverless rewrites and dist outputs.
-- **vite.config.js**: Vite ecosystem bundler properties explicitly targeting multiple HTML entry points.
-
-## 🛠️ Technology Stack
-- **Backend Architecture**: Node.js, Express.js (Serverless Ready)
-- **Database**: MongoDB (Mongoose Pooling Enabled)
-- **Authentication Framework**: JSON Web Tokens (JWT), Bcrypt Auth Hashing
-- **File Storage Management**: Cloudinary (via Multer Buffer Arrays)
-- **Frontend Architecture**: HTML5, Tailwind CSS, Vanilla JavaScript Module Federation
-- **Bundler Compiler**: Vite Build Automation
+*Created by Google Deepmind Advanced Agentic Coding Team* 🚀
