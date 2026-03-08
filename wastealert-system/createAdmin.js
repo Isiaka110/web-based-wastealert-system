@@ -22,13 +22,10 @@ const seedAdmin = async () => {
             process.exit(0);
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash('admin123', salt);
-
         await User.create({
             username: 'SuperAdmin',
             email: adminEmail,
-            password: hashedPassword,
+            password: 'admin123',
             role: 'admin',
             is_approved: true
         });
